@@ -28,13 +28,13 @@ see Deploying below).
 | 02 | cog | Sentinel-2 L2A COG, tile 55GEN | cell | gridlook reads GeoTIFF only as a WGS84 overlay texture, not as data | virtual Zarr/Icechunk view over the COG from `gdal mdim get-refs` / blocklist |
 | 03 | big-array | GHRSST MUR 0.01 deg SST as Zarr, no hierarchy | cell | whole-field reads at one dimension index; no spatial windowing | publish coarser siblings (LOD as a data product) the way DKRZ publishes z-levels, produced by grout |
 | 04 | polar | GIBS EPSG:3031 / LIST WMTS tiles on polar stereo | cell | no tile-service ingestion; projections limited to d3-geo | shared tile-source module; `crsDefinition` as a common CRS authority |
-| 05 | curvilinear | CMIP6 GFDL-ESM4 tos, tripolar with 2D lon/lat (BRAN later) | warp | no geolocation-array (2D lon/lat) path in the warp renderers | anglr-style cell mesh from geoloc arrays as a third pluggable renderer |
-| 06 | icechunk | an Icechunk store (ACCESS-NRI) | warp | no Icechunk reader in our layer-3 reads | lift icechunk-js into the shared reads module |
+| 05 | curvilinear | CMIP6 GFDL-ESM4 tos, tripolar with 2D lon/lat (BRAN later) | shared | both draw it: cells on the sphere vs cells rasterised then warped; ortho-cog-viewer/rwarp cannot | lift rangefinder's curvilinear.js into the shared reads module |
+| 06 | icechunk | an Icechunk store (ACCESS-NRI) | warp | no Icechunk reader on the warp side | icechunk-js as a fourth store kind in rangefinder; plan in docs/rangefinder-icechunk.md |
 | 07 | projections | Blue Marble vs CMIP6 HadGEM3 tas | shared | d3-geo list vs proj4js + proj-wasm (interrupted Goode, tpers, omerc) | proj-wasm as a shared resolver on an unknown-code miss |
 
-Pages 01, 05 and 06 are gaps on the warp side; 02, 03 and 04 are gaps
-on the cell side; 07 is shared ground with different vocabularies. Keep
-it balanced.
+Pages 01 and 06 are gaps on the warp side; 02, 03 and 04 are gaps on
+the cell side; 05 and 07 are shared ground reached by different routes.
+Keep it balanced. Plans for closing a gap live in docs/.
 
 ## How a page works
 

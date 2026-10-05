@@ -9,7 +9,7 @@
   "left": {
     "label": "warp: rangefinder",
     "url": null,
-    "note": "No Icechunk reader on the warp side. rangefinder reads COGs, tiles and plain Zarr; an Icechunk repo is a manifest-and-snapshot layout it does not understand."
+    "note": "No Icechunk reader on the warp side yet. rangefinder already reads plain Zarr, Kerchunk JSON and Kerchunk Parquet references through one store seam; Icechunk is a fourth store kind behind that seam. Plan: docs/rangefinder-icechunk.md in this repo."
   },
   "right": {
     "label": "cell: gridlook",
@@ -17,9 +17,10 @@
     "note": "gridlook reads Icechunk stores and groups via icechunk-js (v1.1, v1.3). Right panel URL to be filled once a public CORS-enabled store exists."
   },
   "gap": "Icechunk is a first-class source for gridlook and absent from the warp side.",
-  "bridge": "Lift icechunk-js into the shared layer-3 reads module used by rangefinder, so virtual chunk references over NetCDF/COG archives become readable without materialising anything.",
+  "bridge": "icechunk-js (the same reader gridlook uses) as a fourth store kind in rangefinder's openDataset; the plan is written and the work is mostly fixtures and Zarr v3 metadata details. See docs/rangefinder-icechunk.md.",
   "todo": [
+    "implement docs/rangefinder-icechunk.md in hypertidy/rangefinder (sections 2-4 first, against a self-written fixture)",
     "ask for or create a small public Icechunk store on a CORS bucket; the ACCESS-NRI virtualization work is the natural candidate",
-    "set right.url to {GRIDLOOK}#<store url>"
+    "set right.url to {GRIDLOOK}#<store url> and left.url to the rangefinder permalink; page becomes shared"
   ]
 }

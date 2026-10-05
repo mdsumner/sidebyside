@@ -1,24 +1,25 @@
 {
   "title": "A curvilinear model grid",
-  "status": "warp-gap",
+  "status": "shared",
   "dataset": {
     "name": "CMIP6 GFDL-ESM4 historical Omon tos, 50 km tripolar grid with 2D lon/lat (Pangeo Google Cloud bucket)",
     "url": "https://storage.googleapis.com/cmip6/CMIP6/CMIP/NOAA-GFDL/GFDL-ESM4/historical/r2i1p1f1/Omon/tos/gn/v20180701/",
     "cors": true
   },
   "left": {
-    "label": "warp: ortho-cog-viewer / rwarp",
-    "url": null,
-    "note": "Both renderers want a CRS and a geotransform. A tripolar grid has neither; it has 2D lon/lat arrays. There is no geolocation-array path in the browser yet."
+    "label": "warp: rangefinder (curvilinear reads, lib/curvilinear.js)",
+    "url": "https://hypertidy.github.io/rangefinder/",
+    "note": "rangefinder reads 2D lon/lat grids: cell corners from the coordinate arrays, cells rasterised into the view grid, then the usual warp. Open the GFDL URL from the source dialog; the permalink hash goes here once recorded."
   },
   "right": {
     "label": "cell: gridlook",
     "url": "{GRIDLOOK}#https://storage.googleapis.com/cmip6/CMIP6/CMIP/NOAA-GFDL/GFDL-ESM4/historical/r2i1p1f1/Omon/tos/gn/v20180701/"
   },
-  "gap": "gridlook draws cells from geolocation arrays; the warp renderers need an affine grid, so a tripolar slice is invisible to them.",
-  "bridge": "An anglr-style cell mesh built from the 2D lon/lat arrays as a third renderer behind the pluggable interface; GDAL's geoloc warper is the non-browser equivalent.",
+  "gap": "Both sides draw a tripolar grid, by different routes. gridlook places each cell on the sphere from its 2D lon/lat; rangefinder rasterises the cells into an affine view grid and warps that. ortho-cog-viewer and rwarp still need an affine source and cannot show this at all.",
+  "bridge": "Lift rangefinder's curvilinear.js (corners from geoloc arrays, cell rasterisation) into the shared reads module so ortho-cog-viewer and rwarp get it for free; the cell-mesh renderer (anglr-style) stays the better long-term target for the warp shells.",
   "todo": [
-    "confirm the curvilinear detection fires in the vendored build (it is in gridlook's shipped catalog tagged curvilinear)",
+    "record the rangefinder permalink that opens the GFDL tos store, in left.url",
+    "confirm the curvilinear detection fires in the vendored gridlook build (it is in their shipped catalog tagged curvilinear)",
     "later: swap in a BRAN or ACCESS-OM slice once one is staged on a CORS bucket, so the page uses Australian data"
   ]
 }
