@@ -9,7 +9,7 @@
   "left": {
     "label": "warp: ortho-cog-viewer",
     "url": null,
-    "note": "No cell renderer. The mesh/UV warp renderer takes a raster with a CRS and a geotransform; a HEALPix array is a 1D list of cells with no image to warp. The warp side's DGGS work lives in trend.sst (S2 cells, Parquet aggregates) and is analytical only: it has no path to the screen either."
+    "note": "rangefinder opens the store and refuses the variable: \"pr: no 1D coordinate arrays for cell / time\", after 404s on cell/.zarray and cell/zarr.json. There is no coordinate array because a HEALPix cell's position is implied by its index, level and scheme; the geometry is a recipe, not arrays, and the warp side only reads arrays. Plan: docs/rangefinder-healpix.md in this repo."
   },
   "right": {
     "label": "cell: gridlook",
@@ -18,11 +18,10 @@
     "note": "Loaded through gridlook.pages.dev until the vendored build is confirmed to reach this host from the sidebyside origin."
   },
   "gap": "The warp side has DGGS on the analysis side (trend.sst: S2 cells plus Parquet) and none on the rendering side; the cell side has DGGS on the rendering side (HEALPix via the Zarr DGGS convention) and nothing on the analysis side. Neither can draw the other's cells.",
-  "bridge": "A cell renderer that takes (cell id, value) pairs for any DGGS with a cell-to-vertices function: HEALPix from healpix-geo, S2 from s2geometry. HEALPix cell centres through delaunay is the smaller first step; S2 cells from trend.sst Parquet as a second source would make this page shared.",
+  "bridge": "HEALPix has an inverse (lon/lat to cell id), so the warp side can sample it the way it samples an affine grid: view pixel centres to cell ids in one healpix-geo call, then index the chunk. No mesh needed. Plan in docs/rangefinder-healpix.md; S2 via the same geometry object brings trend.sst cells, making the page shared from both ends.",
   "todo": [
-    "the README's hackathon path (s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/...) is dead, not CORS-blocked; this dataset comes from gridlook's own static/catalog.json",
-    "test the vendored build against s3.waterpark.dkrz.de; if it loads, drop gridlook: hosted and this page is on the pin",
-    "decide which bridge to prototype first: delaunay of cell centres is the smaller step",
-    "stage a small trend.sst S2-cell Parquet (one period, one variable) on a CORS bucket as the candidate left-panel dataset; see https://github.com/mdsumner/trend.sst"
+    "implement docs/rangefinder-healpix.md in hypertidy/rangefinder (step 1, the specific error message, can ship alone)",
+    "test the vendored gridlook build against s3.waterpark.dkrz.de; if it loads, drop gridlook: hosted and this page is on the pin",
+    "stage a small trend.sst S2-cell Parquet (one period, one variable) on a CORS bucket as the second warp-side dataset; see https://github.com/mdsumner/trend.sst"
   ]
 }
