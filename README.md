@@ -1,30 +1,40 @@
 # sidebyside
 
-Illustration-only comparisons of browser-native raster/grid viewers:
-the hypertidy/mdsumner set (ortho-cog-viewer, rangefinder, rwarp wasm)
-on the left, [d70-t/gridlook](https://github.com/d70-t/gridlook) on the right.
+Illustration-only comparisons of two stances on browser-native raster
+and grid viewing. The columns are stances, not owners:
 
-Each page is one dataset, two viewers, one named gap, one proposed bridge.
-There is no UI beyond that. The point is to show exactly where a gap can
-be filled or a bridge built, not to be usable as a viewer.
+- **warp**: the image is the primitive. A raster with a CRS and a
+  geotransform, warped to the view. ortho-cog-viewer, rangefinder, the
+  rwarp wasm slippy map (hypertidy / mdsumner).
+- **cell**: the grid is the primitive. Cells placed on the sphere, no
+  warp step. [d70-t/gridlook](https://github.com/d70-t/gridlook) (DKRZ).
+
+Each page is one dataset, both stances, one named gap, one proposed
+bridge. There is no UI beyond that. The point is to show exactly where a
+gap can be filled or a bridge built, not to be usable as a viewer. Most
+gaps are consequences of the stance (no COG, no windowing, no tile
+services follow from grid-first; no DGGS cells, no geolocation arrays
+follow from image-first). The ones that are not, like a missing reader,
+stand out for that reason.
 
 Live site: https://mdsumner.github.io/sidebyside/ (once Pages is enabled,
 see Deploying below).
 
 ## Pages
 
-| # | Page | Dataset | Who is behind | Gap | Bridge |
+| # | Page | Dataset | Gap on | Gap | Bridge |
 |---|------|---------|---------------|-----|--------|
-| 01 | healpix | DKRZ d3hp003 HEALPix z7 (Zarr); trend.sst S2 cells as a second source | ours | DGGS on our analysis side (trend.sst) and on their rendering side, never both | a (cell id, value) renderer with a cell-to-vertices function per DGGS; delaunay of HEALPix centres first |
-| 02 | cog | Sentinel-2 L2A COG, tile 55GEN | theirs | gridlook reads GeoTIFF only as a WGS84 overlay texture, not as data | virtual Zarr/Icechunk view over the COG from `gdal mdim get-refs` / blocklist |
-| 03 | big-array | GHRSST MUR 0.01 deg SST as Zarr, no hierarchy | theirs | whole-field reads at one dimension index; no spatial windowing | publish coarser siblings (LOD as a data product) the way DKRZ publishes z-levels, produced by grout |
-| 04 | polar | GIBS EPSG:3031 / LIST WMTS tiles on polar stereo | theirs | no tile-service ingestion; projections limited to d3-geo | shared tile-source module; `crsDefinition` as a common CRS authority |
-| 05 | curvilinear | BRAN / NEMO tripolar slice with 2D lon/lat | ours | no geolocation-array (2D lon/lat) path in the warp renderers | anglr-style cell mesh from geoloc arrays as a third pluggable renderer |
-| 06 | icechunk | an Icechunk store (ACCESS-NRI) | ours | no Icechunk reader in our layer-3 reads | lift icechunk-js into the shared reads module |
-| 07 | projections | the same global field in both | draw | d3-geo list vs proj4js + proj-wasm (interrupted Goode, tpers, omerc) | proj-wasm as a shared resolver on an unknown-code miss |
+| 01 | healpix | DKRZ d3hp003 HEALPix z7 (Zarr); trend.sst S2 cells as a second source | warp | DGGS on our analysis side (trend.sst) and on their rendering side, never both | a (cell id, value) renderer with a cell-to-vertices function per DGGS; delaunay of HEALPix centres first |
+| 02 | cog | Sentinel-2 L2A COG, tile 55GEN | cell | gridlook reads GeoTIFF only as a WGS84 overlay texture, not as data | virtual Zarr/Icechunk view over the COG from `gdal mdim get-refs` / blocklist |
+| 03 | big-array | GHRSST MUR 0.01 deg SST as Zarr, no hierarchy | cell | whole-field reads at one dimension index; no spatial windowing | publish coarser siblings (LOD as a data product) the way DKRZ publishes z-levels, produced by grout |
+| 04 | polar | GIBS EPSG:3031 / LIST WMTS tiles on polar stereo | cell | no tile-service ingestion; projections limited to d3-geo | shared tile-source module; `crsDefinition` as a common CRS authority |
+| 05 | curvilinear | BRAN / NEMO tripolar slice with 2D lon/lat | warp | no geolocation-array (2D lon/lat) path in the warp renderers | anglr-style cell mesh from geoloc arrays as a third pluggable renderer |
+| 06 | icechunk | an Icechunk store (ACCESS-NRI) | warp | no Icechunk reader in our layer-3 reads | lift icechunk-js into the shared reads module |
+| 07 | projections | the same global field in both | shared | d3-geo list vs proj4js + proj-wasm (interrupted Goode, tpers, omerc) | proj-wasm as a shared resolver on an unknown-code miss |
 
-Pages 01, 05 and 06 are where we are behind; 02, 03 and 04 are where
-gridlook is; 07 is a draw with different vocabularies. Keep it balanced.
+Pages 01, 05 and 06 are gaps on the warp side; 02, 03 and 04 are gaps
+on the cell side; 07 is shared ground with different vocabularies. Keep
+it balanced.
 
 ## How a page works
 
@@ -40,24 +50,24 @@ pages/
 ```json
 {
   "title": "HEALPix on both",
-  "status": "ours-gap",
+  "status": "warp-gap",
   "dataset": { "name": "...", "url": "https://...", "cors": true },
-  "left":  { "label": "ours (ortho-cog-viewer)", "url": null, "note": "why there is nothing to show" },
-  "right": { "label": "gridlook", "url": "{GRIDLOOK}#https://..." },
+  "left":  { "label": "warp: ortho-cog-viewer", "url": null, "note": "why there is nothing to show" },
+  "right": { "label": "cell: gridlook", "url": "{GRIDLOOK}#https://..." },
   "gap": "one sentence",
   "bridge": "one sentence",
   "todo": ["anything still to stage or confirm"]
 }
 ```
 
-`status` is one of `ours-gap`, `theirs-gap`, `draw`. A `url` of `null`
+`status` is one of `warp-gap`, `cell-gap`, `shared`. A `url` of `null`
 renders an empty panel with the `note`, which is the honest way to show
 a gap. `{GRIDLOOK}` is replaced with the gridlook base from `config.json`:
 the vendored build on the deployed site, `https://gridlook.pages.dev/`
 when running locally without one. A side may set `"gridlook": "hosted"`
 to force `gridlook.pages.dev` instead of the pinned build; this is for
 datasets whose bucket CORS allow-lists that origin specifically (DKRZ
-does). Data we host ourselves gets `*` and stays on the pin.
+does). Data staged for this suite gets `*` and stays on the pin.
 
 To add a page: copy a directory, edit `page.json`, add the slug to
 `pages/index.json`.

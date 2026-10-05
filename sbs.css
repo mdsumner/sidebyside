@@ -3,9 +3,9 @@
   --fg: #1a1a1a;
   --muted: #666;
   --line: #ddd;
-  --ours: #2a6f97;
-  --theirs: #b5651d;
-  --draw: #5a5a5a;
+  --warp: #2a6f97;
+  --cell: #b5651d;
+  --shared: #5a5a5a;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -36,9 +36,9 @@ header .crumb { color: var(--muted); font-size: 0.9em; }
   vertical-align: middle;
   margin-left: 8px;
 }
-.badge.ours-gap { background: var(--ours); }
-.badge.theirs-gap { background: var(--theirs); }
-.badge.draw { background: var(--draw); }
+.badge.warp-gap { background: var(--warp); }
+.badge.cell-gap { background: var(--cell); }
+.badge.shared { background: var(--shared); }
 .lines { margin: 8px 0 12px 0; }
 .lines p { margin: 2px 0; }
 .lines b { display: inline-block; min-width: 5em; }

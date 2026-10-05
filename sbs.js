@@ -31,6 +31,13 @@ function el(tag, attrs, children) {
 
 const HOSTED = "https://gridlook.pages.dev/";
 
+// Columns are stances, not owners. warp: the image is the primitive (raster +
+// CRS + geotransform, warped to the view). cell: the grid is the primitive
+// (cells placed on the sphere, no warp step).
+function badgeText(status) {
+  return { "warp-gap": "gap: warp side", "cell-gap": "gap: cell side", "shared": "shared" }[status] || status;
+}
+
 // side.gridlook: "vendored" (default, the pinned build on this site) or
 // "hosted" (gridlook.pages.dev, for data whose CORS allow-list names that origin).
 function resolve(side, cfg) {
@@ -68,7 +75,7 @@ async function renderPage() {
     ]),
     el("h1", {}, [
       document.createTextNode(p.title),
-      el("span", { class: "badge " + p.status, text: p.status.replace("-", " ") }),
+      el("span", { class: "badge " + p.status, text: badgeText(p.status) }),
     ]),
   ]);
 
@@ -109,14 +116,14 @@ async function renderIndex() {
     el("tr", {}, [
       el("td", {}, [el("a", { href: "pages/" + slug + "/", text: slug })]),
       el("td", { text: p.dataset.name }),
-      el("td", {}, [el("span", { class: "badge " + p.status, text: p.status.replace("-", " ") })]),
+      el("td", {}, [el("span", { class: "badge " + p.status, text: badgeText(p.status) })]),
       el("td", { text: p.gap }),
       el("td", { text: p.bridge }),
     ])
   );
   const table = el("table", {}, [
     el("thead", {}, [
-      el("tr", {}, ["page", "dataset", "behind", "gap", "bridge"].map((t) => el("th", { text: t }))),
+      el("tr", {}, ["page", "dataset", "gap on", "gap", "bridge"].map((t) => el("th", { text: t }))),
     ]),
     el("tbody", {}, rows),
   ]);

@@ -1,28 +1,28 @@
 {
   "title": "HEALPix on both",
-  "status": "ours-gap",
+  "status": "warp-gap",
   "dataset": {
     "name": "DKRZ WCRP hackathon ICON d3hp003, P1D mean, HEALPix z7, atmosphere (Zarr)",
     "url": "https://s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/data/ICON/d3hp003.zarr/P1D_mean_z7_atm",
     "cors": true
   },
   "left": {
-    "label": "ours (ortho-cog-viewer)",
+    "label": "warp: ortho-cog-viewer",
     "url": null,
-    "note": "No cell renderer. The mesh/UV warp renderer takes a raster with a CRS and a geotransform; a HEALPix array is a 1D list of cells with no image to warp. Our DGGS work lives in trend.sst (S2 cells, Parquet aggregates) and is analytical only: it has no path to the screen either."
+    "note": "No cell renderer. The mesh/UV warp renderer takes a raster with a CRS and a geotransform; a HEALPix array is a 1D list of cells with no image to warp. The warp side's DGGS work lives in trend.sst (S2 cells, Parquet aggregates) and is analytical only: it has no path to the screen either."
   },
   "right": {
-    "label": "gridlook",
+    "label": "cell: gridlook",
     "url": "{GRIDLOOK}#https://s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/data/ICON/d3hp003.zarr/P1D_mean_z7_atm",
     "gridlook": "hosted",
-    "note": "DKRZ's bucket CORS allow-lists gridlook.pages.dev, not our origin, so this panel iframes the hosted build rather than the pinned one."
+    "note": "DKRZ's bucket CORS allow-lists gridlook.pages.dev, not the sidebyside origin, so this panel iframes the hosted build rather than the pinned one."
   },
-  "gap": "We have DGGS on the analysis side (trend.sst: S2 cells plus Parquet) and no DGGS on the rendering side; gridlook has DGGS on the rendering side (HEALPix via the Zarr DGGS convention) and nothing on the analysis side. Neither can draw the other's cells.",
-  "bridge": "A cell renderer that takes (cell id, value) pairs for any DGGS with a cell-to-vertices function: HEALPix from healpix-geo, S2 from s2geometry. HEALPix cell centres through delaunay is the smaller first step; S2 cells from trend.sst Parquet as a second source would turn this page into a draw.",
+  "gap": "The warp side has DGGS on the analysis side (trend.sst: S2 cells plus Parquet) and none on the rendering side; the cell side has DGGS on the rendering side (HEALPix via the Zarr DGGS convention) and nothing on the analysis side. Neither can draw the other's cells.",
+  "bridge": "A cell renderer that takes (cell id, value) pairs for any DGGS with a cell-to-vertices function: HEALPix from healpix-geo, S2 from s2geometry. HEALPix cell centres through delaunay is the smaller first step; S2 cells from trend.sst Parquet as a second source would make this page shared.",
   "todo": [
     "confirm the z7 group loads in the vendored build (it is the README example, so it should)",
     "decide which bridge to prototype first: delaunay of cell centres is the smaller step",
     "stage a small trend.sst S2-cell Parquet (one period, one variable) on a CORS bucket as the candidate left-panel dataset; see https://github.com/mdsumner/trend.sst",
-    "DKRZ CORS allow-lists gridlook.pages.dev only; the pinned build cannot load this dataset from our origin. Mirror the z7 group to a bucket with open CORS to put this page on the pin."
+    "DKRZ CORS allow-lists gridlook.pages.dev only; the pinned build cannot load this dataset from the sidebyside origin. Mirror the z7 group to a bucket with open CORS to put this page on the pin."
   ]
 }
