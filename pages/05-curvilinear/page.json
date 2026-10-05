@@ -1,0 +1,25 @@
+{
+  "title": "A curvilinear model grid",
+  "status": "ours-gap",
+  "dataset": {
+    "name": "BRAN (or NEMO ORCA) tripolar surface temperature slice with 2D lon/lat coordinate arrays, as Zarr",
+    "url": null,
+    "cors": false
+  },
+  "left": {
+    "label": "ours (ortho-cog-viewer / rwarp)",
+    "url": null,
+    "note": "Both renderers want a CRS and a geotransform. A tripolar grid has neither; it has 2D lon/lat arrays. We have no geolocation-array path in the browser yet."
+  },
+  "right": {
+    "label": "gridlook",
+    "url": null,
+    "note": "gridlook renders curvilinear grids by placing each cell from its 2D lon/lat (centre-based alignment, v1.1). Right panel URL to be filled once the dataset is staged."
+  },
+  "gap": "gridlook draws cells from geolocation arrays; our warp renderers need an affine grid, so a tripolar slice is invisible to them.",
+  "bridge": "An anglr-style cell mesh built from the 2D lon/lat arrays as a third renderer behind the pluggable interface; GDAL's geoloc warper is the non-browser equivalent.",
+  "todo": [
+    "stage one BRAN or ORCA surface slice as Zarr with the 2D lon/lat coordinates on a CORS bucket",
+    "set right.url to {GRIDLOOK}#<that url> and confirm the curvilinear detection fires"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "title": "HEALPix on both",
+  "status": "ours-gap",
+  "dataset": {
+    "name": "DKRZ WCRP hackathon ICON d3hp003, P1D mean, HEALPix z7, atmosphere (Zarr)",
+    "url": "https://s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/data/ICON/d3hp003.zarr/P1D_mean_z7_atm",
+    "cors": true
+  },
+  "left": {
+    "label": "ours (ortho-cog-viewer)",
+    "url": null,
+    "note": "No cell renderer. The mesh/UV warp renderer takes a raster with a CRS and a geotransform; a HEALPix array is a 1D list of cells with no image to warp."
+  },
+  "right": {
+    "label": "gridlook",
+    "url": "{GRIDLOOK}#https://s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/data/ICON/d3hp003.zarr/P1D_mean_z7_atm"
+  },
+  "gap": "We have no path from a DGGS or unstructured grid to the screen; gridlook treats the grid as the primitive and draws cells directly.",
+  "bridge": "HEALPix cell centres through delaunay into our mesh renderer (same trick gridlook uses for ICON), or a HEALPix-to-tile-scheme step in grout/aatgrid so the warp renderer sees a raster.",
+  "todo": [
+    "confirm the z7 group loads in the vendored build (it is the README example, so it should)",
+    "decide which bridge to prototype first: delaunay of cell centres is the smaller step"
+  ]
+}

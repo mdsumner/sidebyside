@@ -1,0 +1,24 @@
+{
+  "title": "A Sentinel-2 COG as data",
+  "status": "theirs-gap",
+  "dataset": {
+    "name": "Sentinel-2 L2A true colour COG, tile 55GEN (UTM 55S), sentinel-cogs on AWS",
+    "url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/55/G/EN/",
+    "cors": true
+  },
+  "left": {
+    "label": "ours (ortho-cog-viewer)",
+    "url": "https://mdsumner.github.io/ortho-cog-viewer/"
+  },
+  "right": {
+    "label": "gridlook",
+    "url": null,
+    "note": "gridlook can import a WGS84 GeoTIFF as an overlay texture (v1.4) but it cannot read a projected COG as a data array, so there is nothing to load here."
+  },
+  "gap": "gridlook's readers are Zarr, Icechunk and NetCDF; a COG in a projected CRS is not a dataset to it.",
+  "bridge": "A virtual Zarr or Icechunk view over the COG, built from the chunk byte references that gdal mdim get-refs / blocklist already produce, so gridlook reads the same bytes through zarrita.",
+  "todo": [
+    "pin a specific 55GEN scene URL and the ortho-cog-viewer hash/preset that opens it, so the left panel loads the scene rather than the default Blue Marble",
+    "produce the virtual Zarr for that scene and host it on a CORS bucket; then the right panel becomes {GRIDLOOK}#<virtual zarr url> and this page flips to a draw"
+  ]
+}

@@ -1,0 +1,70 @@
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read gridlook pin
+        id: pin
+        run: echo "tag=$(tr -d '[:space:]' < gridlook.pin)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout gridlook at pin
+        uses: actions/checkout@v4
+        with:
+          repository: d70-t/gridlook
+          ref: ${{ steps.pin.outputs.tag }}
+          path: gridlook-src
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: gridlook-src/package-lock.json
+
+      - name: Build gridlook
+        working-directory: gridlook-src
+        env:
+          HUSKY: 0
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site/gridlook
+          cp -r index.html sbs.css sbs.js pages _site/
+          cp -r gridlook-src/dist/. _site/gridlook/
+          printf '{\n  "gridlookBase": "gridlook/",\n  "pinned": "%s"\n}\n' "${{ steps.pin.outputs.tag }}" > _site/config.json
+          touch _site/.nojekyll
+          find _site -maxdepth 2 | sort
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

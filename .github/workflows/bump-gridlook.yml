@@ -1,0 +1,57 @@
+name: bump gridlook pin
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare latest release with pin
+        id: cmp
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current="$(tr -d '[:space:]' < gridlook.pin)"
+          latest="$(gh api repos/d70-t/gridlook/releases/latest --jq .tag_name)"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          if [ "$current" = "$latest" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open PR
+        if: steps.cmp.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT: ${{ steps.cmp.outputs.current }}
+          LATEST: ${{ steps.cmp.outputs.latest }}
+        run: |
+          branch="bump-gridlook-$LATEST"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            echo "branch $branch already exists, nothing to do"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          printf '%s\n' "$LATEST" > gridlook.pin
+          git add gridlook.pin
+          git commit -m "bump gridlook pin $CURRENT -> $LATEST"
+          git push origin "$branch"
+          gh pr create \
+            --title "bump gridlook pin $CURRENT -> $LATEST" \
+            --body "Latest gridlook release is $LATEST (pin was $CURRENT). Changelog: https://github.com/d70-t/gridlook/blob/$LATEST/CHANGELOG.md
+
+Merging rebuilds the site. Check each page still loads; a page that breaks is the signal that a contract moved." \
+            --base main --head "$branch"

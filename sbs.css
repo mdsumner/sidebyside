@@ -1,0 +1,86 @@
+:root {
+  --bg: #fafafa;
+  --fg: #1a1a1a;
+  --muted: #666;
+  --line: #ddd;
+  --ours: #2a6f97;
+  --theirs: #b5651d;
+  --draw: #5a5a5a;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161616;
+    --fg: #e8e8e8;
+    --muted: #9a9a9a;
+    --line: #333;
+  }
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+body { padding: 16px; max-width: 1600px; margin: 0 auto; }
+a { color: inherit; }
+header { margin-bottom: 12px; }
+header h1 { font-size: 1.3em; margin: 0 0 4px 0; }
+header .crumb { color: var(--muted); font-size: 0.9em; }
+.badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.8em;
+  color: #fff;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+.badge.ours-gap { background: var(--ours); }
+.badge.theirs-gap { background: var(--theirs); }
+.badge.draw { background: var(--draw); }
+.lines { margin: 8px 0 12px 0; }
+.lines p { margin: 2px 0; }
+.lines b { display: inline-block; min-width: 5em; }
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  height: 70vh;
+  min-height: 420px;
+}
+@media (max-width: 900px) {
+  .panels { grid-template-columns: 1fr; height: auto; }
+  .panel { height: 60vh; }
+}
+.panel {
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.panel .label {
+  padding: 4px 8px;
+  font-size: 0.85em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.panel iframe { flex: 1; border: 0; width: 100%; }
+.panel .empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+  font-style: italic;
+}
+.todo { margin-top: 12px; color: var(--muted); font-size: 0.9em; }
+.todo ul { margin: 4px 0 0 0; padding-left: 20px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 0.9em; }

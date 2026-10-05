@@ -1,0 +1,25 @@
+{
+  "title": "Polar imagery from a tile service",
+  "status": "theirs-gap",
+  "dataset": {
+    "name": "NASA GIBS EPSG:3031 imagery (or LIST Tasmania AerialPhoto2026 WMTS), warped in the browser to polar stereographic",
+    "url": "https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+API+for+Developers",
+    "cors": true
+  },
+  "left": {
+    "label": "ours (rwarp wasm slippy map)",
+    "url": null,
+    "note": "rwarp-wasm demo URL to be filled in (GitHub Pages deployment of the rwarp-wasm subcrate, GIBS 3031 preset)."
+  },
+  "right": {
+    "label": "gridlook",
+    "url": null,
+    "note": "gridlook has no XYZ/WMTS/ArcGIS tile ingestion, and its projection list is d3-geo's, so a tile service in EPSG:3031 cannot be loaded or viewed in its native CRS."
+  },
+  "gap": "Tile services and arbitrary projected CRSs are outside gridlook's model; it starts from lon/lat (or 3857) arrays.",
+  "bridge": "A shared tile-source module (XYZ, WMTS GetCapabilities, ArcGIS cached) that both shells can use, and crsDefinition as a common CRS authority with proj4js/proj-wasm behind it.",
+  "todo": [
+    "fill in left.url with the rwarp-wasm demo and its GIBS 3031 preset",
+    "consider a second left panel variant using ortho-cog-viewer's WMTS source on the LIST layer"
+  ]
+}

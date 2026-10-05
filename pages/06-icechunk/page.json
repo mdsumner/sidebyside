@@ -1,0 +1,25 @@
+{
+  "title": "An Icechunk store in the browser",
+  "status": "ours-gap",
+  "dataset": {
+    "name": "A public Icechunk store (ACCESS-NRI virtualized dataset, or a small test store)",
+    "url": null,
+    "cors": false
+  },
+  "left": {
+    "label": "ours (rangefinder)",
+    "url": null,
+    "note": "No Icechunk reader on our side. rangefinder reads COGs, tiles and plain Zarr; an Icechunk repo is a manifest-and-snapshot layout it does not understand."
+  },
+  "right": {
+    "label": "gridlook",
+    "url": null,
+    "note": "gridlook reads Icechunk stores and groups via icechunk-js (v1.1, v1.3). Right panel URL to be filled once a public CORS-enabled store exists."
+  },
+  "gap": "Icechunk is a first-class source for gridlook and absent from ours.",
+  "bridge": "Lift icechunk-js into the shared layer-3 reads module used by rangefinder, so virtual chunk references over NetCDF/COG archives become readable without materialising anything.",
+  "todo": [
+    "ask for or create a small public Icechunk store on a CORS bucket; the ACCESS-NRI virtualization work is the natural candidate",
+    "set right.url to {GRIDLOOK}#<store url>"
+  ]
+}

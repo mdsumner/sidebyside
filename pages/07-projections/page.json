@@ -1,0 +1,23 @@
+{
+  "title": "Projection vocabularies",
+  "status": "draw",
+  "dataset": {
+    "name": "Any global field: Blue Marble on the left (ortho-cog-viewer default), DKRZ d3hp003 z7 on the right",
+    "url": "https://s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/data/ICON/d3hp003.zarr/P1D_mean_z7_atm",
+    "cors": true
+  },
+  "left": {
+    "label": "ours (ortho-cog-viewer: proj4js, omerc centred, interrupted Goode, tpers)",
+    "url": "https://mdsumner.github.io/ortho-cog-viewer/"
+  },
+  "right": {
+    "label": "gridlook (d3-geo and d3-geo-projection, globe plus flat views)",
+    "url": "{GRIDLOOK}#https://s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/data/ICON/d3hp003.zarr/P1D_mean_z7_atm"
+  },
+  "gap": "Neither side is behind; the vocabularies differ. d3-geo gives gridlook many named projections but no PROJ strings or EPSG codes beyond 3857; proj4js gives us PROJ strings and a resolver, but the interrupted and oblique presets are hand-added.",
+  "bridge": "proj-wasm as a shared resolver on an unknown-code miss, so both shells can accept a PROJ string or EPSG code and fall back to the same definition authority.",
+  "todo": [
+    "record the ortho-cog-viewer preset for Goode homolosine and the centred omerc in left.url once its hash scheme is written down",
+    "cycle gridlook's projection menu on the same field for the screenshot pair"
+  ]
+}
