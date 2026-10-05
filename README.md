@@ -15,7 +15,7 @@ see Deploying below).
 
 | # | Page | Dataset | Who is behind | Gap | Bridge |
 |---|------|---------|---------------|-----|--------|
-| 01 | healpix | DKRZ d3hp003 HEALPix z7 (Zarr) | ours | no cell renderer for DGGS/unstructured grids | HEALPix cell centres through delaunay into the mesh/UV renderer, or HEALPix-to-tile-scheme via grout/aatgrid |
+| 01 | healpix | DKRZ d3hp003 HEALPix z7 (Zarr); trend.sst S2 cells as a second source | ours | DGGS on our analysis side (trend.sst) and on their rendering side, never both | a (cell id, value) renderer with a cell-to-vertices function per DGGS; delaunay of HEALPix centres first |
 | 02 | cog | Sentinel-2 L2A COG, tile 55GEN | theirs | gridlook reads GeoTIFF only as a WGS84 overlay texture, not as data | virtual Zarr/Icechunk view over the COG from `gdal mdim get-refs` / blocklist |
 | 03 | big-array | GHRSST MUR 0.01 deg SST as Zarr, no hierarchy | theirs | whole-field reads at one dimension index; no spatial windowing | publish coarser siblings (LOD as a data product) the way DKRZ publishes z-levels, produced by grout |
 | 04 | polar | GIBS EPSG:3031 / LIST WMTS tiles on polar stereo | theirs | no tile-service ingestion; projections limited to d3-geo | shared tile-source module; `crsDefinition` as a common CRS authority |
