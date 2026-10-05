@@ -29,15 +29,24 @@ function el(tag, attrs, children) {
   return n;
 }
 
-function resolve(url, cfg) {
-  if (!url) return null;
-  return url.replace("{GRIDLOOK}", cfg.gridlookBase);
+const HOSTED = "https://gridlook.pages.dev/";
+
+// side.gridlook: "vendored" (default, the pinned build on this site) or
+// "hosted" (gridlook.pages.dev, for data whose CORS allow-list names that origin).
+function resolve(side, cfg) {
+  if (!side.url) return null;
+  const base = side.gridlook === "hosted" ? HOSTED : cfg.gridlookBase;
+  return side.url.replace("{GRIDLOOK}", base);
 }
 
 function panel(side, cfg) {
-  const url = resolve(side.url, cfg);
+  const url = resolve(side, cfg);
+  let text = side.label;
+  if (url && side.url.indexOf("{GRIDLOOK}") !== -1) {
+    text += side.gridlook === "hosted" ? " [gridlook.pages.dev]" : " [pinned build]";
+  }
   const label = el("div", { class: "label", title: url || "" }, [
-    document.createTextNode(side.label + (url ? "  " : "")),
+    document.createTextNode(text + (url ? "  " : "")),
   ]);
   if (url) label.appendChild(el("a", { href: url, target: "_blank", text: "open" }));
   const body = url

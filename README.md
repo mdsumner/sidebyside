@@ -54,7 +54,10 @@ pages/
 renders an empty panel with the `note`, which is the honest way to show
 a gap. `{GRIDLOOK}` is replaced with the gridlook base from `config.json`:
 the vendored build on the deployed site, `https://gridlook.pages.dev/`
-when running locally without one.
+when running locally without one. A side may set `"gridlook": "hosted"`
+to force `gridlook.pages.dev` instead of the pinned build; this is for
+datasets whose bucket CORS allow-lists that origin specifically (DKRZ
+does). Data we host ourselves gets `*` and stays on the pin.
 
 To add a page: copy a directory, edit `page.json`, add the slug to
 `pages/index.json`.
