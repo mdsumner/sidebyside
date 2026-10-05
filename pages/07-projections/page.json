@@ -2,8 +2,8 @@
   "title": "Projection vocabularies",
   "status": "shared",
   "dataset": {
-    "name": "Any global field: Blue Marble on the left (ortho-cog-viewer default), DKRZ d3hp003 z7 on the right",
-    "url": "https://s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/data/ICON/d3hp003.zarr/P1D_mean_z7_atm",
+    "name": "Any global field: Blue Marble on the warp side (ortho-cog-viewer default), CMIP6 HadGEM3-GC31-HM tas on the cell side (gridlook's default)",
+    "url": "https://storage.googleapis.com/cmip6/CMIP6/HighResMIP/MOHC/HadGEM3-GC31-HM/highresSST-present/r1i1p1f1/Amon/tas/gn/v20170831/",
     "cors": true
   },
   "left": {
@@ -12,15 +12,12 @@
   },
   "right": {
     "label": "cell: gridlook (d3-geo and d3-geo-projection, globe plus flat views)",
-    "url": "{GRIDLOOK}#https://s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/data/ICON/d3hp003.zarr/P1D_mean_z7_atm",
-    "gridlook": "hosted",
-    "note": "DKRZ's bucket CORS allow-lists gridlook.pages.dev, not the sidebyside origin, so this panel iframes the hosted build rather than the pinned one."
+    "url": "{GRIDLOOK}#https://storage.googleapis.com/cmip6/CMIP6/HighResMIP/MOHC/HadGEM3-GC31-HM/highresSST-present/r1i1p1f1/Amon/tas/gn/v20170831/"
   },
   "gap": "Shared ground; the vocabularies differ. d3-geo gives gridlook many named projections but no PROJ strings or EPSG codes beyond 3857; proj4js gives the warp side PROJ strings and a resolver, but the interrupted and oblique presets are hand-added.",
   "bridge": "proj-wasm as a shared resolver on an unknown-code miss, so both shells can accept a PROJ string or EPSG code and fall back to the same definition authority.",
   "todo": [
     "record the ortho-cog-viewer preset for Goode homolosine and the centred omerc in left.url once its hash scheme is written down",
-    "cycle gridlook's projection menu on the same field for the screenshot pair",
-    "DKRZ CORS allow-lists gridlook.pages.dev only; the pinned build cannot load this dataset from the sidebyside origin. Mirror the z7 group to a bucket with open CORS to put this page on the pin."
+    "cycle gridlook's projection menu on the same field for the screenshot pair"
   ]
 }

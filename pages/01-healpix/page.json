@@ -2,8 +2,8 @@
   "title": "HEALPix on both",
   "status": "warp-gap",
   "dataset": {
-    "name": "DKRZ WCRP hackathon ICON d3hp003, P1D mean, HEALPix z7, atmosphere (Zarr)",
-    "url": "https://s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/data/ICON/d3hp003.zarr/P1D_mean_z7_atm",
+    "name": "DKRZ EERIE future ssp245, P1M mean, HEALPix level 7 (Zarr; from gridlook's shipped catalog)",
+    "url": "https://s3.waterpark.dkrz.de/eerie/eerie-future-ssp245-v20240618_P1M_mean_7.zarr",
     "cors": true
   },
   "left": {
@@ -13,16 +13,16 @@
   },
   "right": {
     "label": "cell: gridlook",
-    "url": "{GRIDLOOK}#https://s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/data/ICON/d3hp003.zarr/P1D_mean_z7_atm",
+    "url": "{GRIDLOOK}#https://s3.waterpark.dkrz.de/eerie/eerie-future-ssp245-v20240618_P1M_mean_7.zarr",
     "gridlook": "hosted",
-    "note": "DKRZ's bucket CORS allow-lists gridlook.pages.dev, not the sidebyside origin, so this panel iframes the hosted build rather than the pinned one."
+    "note": "Loaded through gridlook.pages.dev until the vendored build is confirmed to reach this host from the sidebyside origin."
   },
   "gap": "The warp side has DGGS on the analysis side (trend.sst: S2 cells plus Parquet) and none on the rendering side; the cell side has DGGS on the rendering side (HEALPix via the Zarr DGGS convention) and nothing on the analysis side. Neither can draw the other's cells.",
   "bridge": "A cell renderer that takes (cell id, value) pairs for any DGGS with a cell-to-vertices function: HEALPix from healpix-geo, S2 from s2geometry. HEALPix cell centres through delaunay is the smaller first step; S2 cells from trend.sst Parquet as a second source would make this page shared.",
   "todo": [
-    "confirm the z7 group loads in the vendored build (it is the README example, so it should)",
+    "the README's hackathon path (s3.eu-dkrz-1.dkrz.cloud/wrcp-hackathon/...) is dead, not CORS-blocked; this dataset comes from gridlook's own static/catalog.json",
+    "test the vendored build against s3.waterpark.dkrz.de; if it loads, drop gridlook: hosted and this page is on the pin",
     "decide which bridge to prototype first: delaunay of cell centres is the smaller step",
-    "stage a small trend.sst S2-cell Parquet (one period, one variable) on a CORS bucket as the candidate left-panel dataset; see https://github.com/mdsumner/trend.sst",
-    "DKRZ CORS allow-lists gridlook.pages.dev only; the pinned build cannot load this dataset from the sidebyside origin. Mirror the z7 group to a bucket with open CORS to put this page on the pin."
+    "stage a small trend.sst S2-cell Parquet (one period, one variable) on a CORS bucket as the candidate left-panel dataset; see https://github.com/mdsumner/trend.sst"
   ]
 }

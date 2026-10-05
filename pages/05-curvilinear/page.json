@@ -2,9 +2,9 @@
   "title": "A curvilinear model grid",
   "status": "warp-gap",
   "dataset": {
-    "name": "BRAN (or NEMO ORCA) tripolar surface temperature slice with 2D lon/lat coordinate arrays, as Zarr",
-    "url": null,
-    "cors": false
+    "name": "CMIP6 GFDL-ESM4 historical Omon tos, 50 km tripolar grid with 2D lon/lat (Pangeo Google Cloud bucket)",
+    "url": "https://storage.googleapis.com/cmip6/CMIP6/CMIP/NOAA-GFDL/GFDL-ESM4/historical/r2i1p1f1/Omon/tos/gn/v20180701/",
+    "cors": true
   },
   "left": {
     "label": "warp: ortho-cog-viewer / rwarp",
@@ -13,13 +13,12 @@
   },
   "right": {
     "label": "cell: gridlook",
-    "url": null,
-    "note": "gridlook renders curvilinear grids by placing each cell from its 2D lon/lat (centre-based alignment, v1.1). Right panel URL to be filled once the dataset is staged."
+    "url": "{GRIDLOOK}#https://storage.googleapis.com/cmip6/CMIP6/CMIP/NOAA-GFDL/GFDL-ESM4/historical/r2i1p1f1/Omon/tos/gn/v20180701/"
   },
   "gap": "gridlook draws cells from geolocation arrays; the warp renderers need an affine grid, so a tripolar slice is invisible to them.",
   "bridge": "An anglr-style cell mesh built from the 2D lon/lat arrays as a third renderer behind the pluggable interface; GDAL's geoloc warper is the non-browser equivalent.",
   "todo": [
-    "stage one BRAN or ORCA surface slice as Zarr with the 2D lon/lat coordinates on a CORS bucket",
-    "set right.url to {GRIDLOOK}#<that url> and confirm the curvilinear detection fires"
+    "confirm the curvilinear detection fires in the vendored build (it is in gridlook's shipped catalog tagged curvilinear)",
+    "later: swap in a BRAN or ACCESS-OM slice once one is staged on a CORS bucket, so the page uses Australian data"
   ]
 }

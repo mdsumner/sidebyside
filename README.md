@@ -24,13 +24,13 @@ see Deploying below).
 
 | # | Page | Dataset | Gap on | Gap | Bridge |
 |---|------|---------|---------------|-----|--------|
-| 01 | healpix | DKRZ d3hp003 HEALPix z7 (Zarr); trend.sst S2 cells as a second source | warp | DGGS on our analysis side (trend.sst) and on their rendering side, never both | a (cell id, value) renderer with a cell-to-vertices function per DGGS; delaunay of HEALPix centres first |
+| 01 | healpix | DKRZ EERIE HEALPix level 7 (Zarr); trend.sst S2 cells as a second source | warp | DGGS on the warp analysis side (trend.sst) and the cell rendering side, never both | a (cell id, value) renderer with a cell-to-vertices function per DGGS; delaunay of HEALPix centres first |
 | 02 | cog | Sentinel-2 L2A COG, tile 55GEN | cell | gridlook reads GeoTIFF only as a WGS84 overlay texture, not as data | virtual Zarr/Icechunk view over the COG from `gdal mdim get-refs` / blocklist |
 | 03 | big-array | GHRSST MUR 0.01 deg SST as Zarr, no hierarchy | cell | whole-field reads at one dimension index; no spatial windowing | publish coarser siblings (LOD as a data product) the way DKRZ publishes z-levels, produced by grout |
 | 04 | polar | GIBS EPSG:3031 / LIST WMTS tiles on polar stereo | cell | no tile-service ingestion; projections limited to d3-geo | shared tile-source module; `crsDefinition` as a common CRS authority |
-| 05 | curvilinear | BRAN / NEMO tripolar slice with 2D lon/lat | warp | no geolocation-array (2D lon/lat) path in the warp renderers | anglr-style cell mesh from geoloc arrays as a third pluggable renderer |
+| 05 | curvilinear | CMIP6 GFDL-ESM4 tos, tripolar with 2D lon/lat (BRAN later) | warp | no geolocation-array (2D lon/lat) path in the warp renderers | anglr-style cell mesh from geoloc arrays as a third pluggable renderer |
 | 06 | icechunk | an Icechunk store (ACCESS-NRI) | warp | no Icechunk reader in our layer-3 reads | lift icechunk-js into the shared reads module |
-| 07 | projections | the same global field in both | shared | d3-geo list vs proj4js + proj-wasm (interrupted Goode, tpers, omerc) | proj-wasm as a shared resolver on an unknown-code miss |
+| 07 | projections | Blue Marble vs CMIP6 HadGEM3 tas | shared | d3-geo list vs proj4js + proj-wasm (interrupted Goode, tpers, omerc) | proj-wasm as a shared resolver on an unknown-code miss |
 
 Pages 01, 05 and 06 are gaps on the warp side; 02, 03 and 04 are gaps
 on the cell side; 07 is shared ground with different vocabularies. Keep
@@ -65,9 +65,11 @@ renders an empty panel with the `note`, which is the honest way to show
 a gap. `{GRIDLOOK}` is replaced with the gridlook base from `config.json`:
 the vendored build on the deployed site, `https://gridlook.pages.dev/`
 when running locally without one. A side may set `"gridlook": "hosted"`
-to force `gridlook.pages.dev` instead of the pinned build; this is for
-datasets whose bucket CORS allow-lists that origin specifically (DKRZ
-does). Data staged for this suite gets `*` and stays on the pin.
+to force `gridlook.pages.dev` instead of the pinned build, for a dataset
+not yet confirmed to load from this site's origin. Data staged for this
+suite gets `*` and stays on the pin. gridlook's own shipped catalog
+(`public/static/catalog.json` in their repo) is the reliable source of
+known-good dataset URLs; the hackathon path in their README is dead.
 
 To add a page: copy a directory, edit `page.json`, add the slug to
 `pages/index.json`.
