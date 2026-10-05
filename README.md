@@ -20,6 +20,11 @@ stand out for that reason.
 Live site: https://mdsumner.github.io/sidebyside/ (once Pages is enabled,
 see Deploying below).
 
+## Article
+
+`article/README.md`: warp and cell, two worlds that were never separate.
+The short explainer the pages are evidence for.
+
 ## Pages
 
 | # | Page | Dataset | Gap on | Gap | Bridge |
