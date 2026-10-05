@@ -49,9 +49,13 @@ jobs:
           git add gridlook.pin
           git commit -m "bump gridlook pin $CURRENT -> $LATEST"
           git push origin "$branch"
+          {
+            echo "Latest gridlook release is $LATEST (pin was $CURRENT)."
+            echo "Changelog: https://github.com/d70-t/gridlook/blob/$LATEST/CHANGELOG.md"
+            echo
+            echo "Merging rebuilds the site. Check each page still loads; a page that breaks is the signal that a contract moved."
+          } > "$RUNNER_TEMP/pr-body.md"
           gh pr create \
             --title "bump gridlook pin $CURRENT -> $LATEST" \
-            --body "Latest gridlook release is $LATEST (pin was $CURRENT). Changelog: https://github.com/d70-t/gridlook/blob/$LATEST/CHANGELOG.md
-
-Merging rebuilds the site. Check each page still loads; a page that breaks is the signal that a contract moved." \
+            --body-file "$RUNNER_TEMP/pr-body.md" \
             --base main --head "$branch"
