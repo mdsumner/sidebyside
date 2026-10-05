@@ -8,8 +8,7 @@
   },
   "left": {
     "label": "warp: rangefinder (curvilinear reads, lib/curvilinear.js)",
-    "url": "https://hypertidy.github.io/rangefinder/",
-    "note": "rangefinder reads 2D lon/lat grids: cell corners from the coordinate arrays, cells rasterised into the view grid, then the usual warp. Open the GFDL URL from the source dialog; the permalink hash goes here once recorded."
+    "url": "https://hypertidy.github.io/rangefinder/#src=zarr&zarr=https%3A%2F%2Fstorage.googleapis.com%2Fcmip6%2FCMIP6%2FCMIP%2FNOAA-GFDL%2FGFDL-ESM4%2Fhistorical%2Fr2i1p1f1%2FOmon%2Ftos%2Fgn%2Fv20180701&zvar=tos&roi=-270.35156%2C-80.53207%2C270.35156%2C85.00000&from=2014-11-16&to=2014-12-16&cloud=40&preset=single%3Atos&day=2014-12-16&ramp=viridis&lim=pct&pct=2%2C98&curve=linear&gamma=1.00&off=auto"
   },
   "right": {
     "label": "cell: gridlook",
@@ -18,7 +17,6 @@
   "gap": "Both sides draw a tripolar grid, by different routes. gridlook places each cell on the sphere from its 2D lon/lat; rangefinder rasterises the cells into an affine view grid and warps that. ortho-cog-viewer and rwarp still need an affine source and cannot show this at all.",
   "bridge": "Lift rangefinder's curvilinear.js (corners from geoloc arrays, cell rasterisation) into the shared reads module so ortho-cog-viewer and rwarp get it for free; the cell-mesh renderer (anglr-style) stays the better long-term target for the warp shells.",
   "todo": [
-    "record the rangefinder permalink that opens the GFDL tos store, in left.url",
     "confirm the curvilinear detection fires in the vendored gridlook build (it is in their shipped catalog tagged curvilinear)",
     "later: swap in a BRAN or ACCESS-OM slice once one is staged on a CORS bucket, so the page uses Australian data"
   ]
