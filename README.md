@@ -23,7 +23,9 @@ see Deploying below).
 ## Article
 
 `article/README.md`: warp and cell, two worlds that were never separate.
-The short explainer the pages are evidence for.
+The short explainer the pages are evidence for; `article/2026-10-06_warp-and-cell.qmd`
+is the same piece formatted for the hypertidy.org Quarto blog, and
+`article/history-notes.md` holds the material for the longer version.
 
 ## Pages
 
