@@ -1,0 +1,166 @@
+# Notes for the long version: what the 2011 thesis already said
+
+Source: Sumner, M. D. (2011). The tag location problem. PhD thesis,
+IMAS, University of Tasmania. Written 2008-2010 with R 2.12.0, sp,
+rgdal, maptools, spatstat. Page numbers are the thesis's own.
+
+These are the passages that map onto the warp / cell / drape vocabulary
+of article/README.md, with the mapping stated. For the hypertidy long
+version, which will do the sp/rgdal history properly.
+
+## 1. Discrete versus continuous, in the data or in the rendering (p. 25)
+
+> "The trip package provides tools to produce simple and KDE grids with
+> line or point interpretations. The distinction here is one between
+> discrete and continuous representations which can be represented in
+> the data itself, or in the visualization technique or analysis used.
+> The lack of clarity for these distinctions in spatial software is one
+> of the problems faced in tracking research."
+
+This is the drape-versus-materialise distinction in 2009 words: the
+same continuity can live in the stored data (a materialised surface) or
+in the technique that draws it (a drape), and the software of the day
+did not let you say which you meant. The article's section "Drape is
+not warp" is this paragraph, seventeen years later, with GPUs.
+
+## 2. The mesh, named and set aside (p. 21)
+
+> "Regular or irregular 'wireframe' representations give a smoother
+> result and have continuous analytical and visualization counterparts
+> via interpolation, but these data structures are more complicated to
+> calculate and are much less widely supported."
+
+And p. 18, in parentheses:
+
+> "(Regular grids are historically easy to store and to compute, and so
+> are applied most commonly -- irregular grids and meshes are not
+> considered here)."
+
+The mesh was already the right answer and already too hard to reach
+from the available tools. anglr, and later the cell stance, are the
+return to this parenthesis. Worth quoting exactly because it shows the
+choice was made consciously, on cost, not on principle.
+
+## 3. Time as attribute versus time as a continuous axis (p. 22)
+
+> "GIS can be used to perform these calculations, but as discussed in
+> Section 2.2.3 working with time in GIS is not well supported and this
+> must be done as an attribute on line objects, rather than on
+> inherently continuous lines that vary through time or other
+> dimensions as well as space."
+
+The earliest form of "Simple Features is a rendering format": a line
+object with time as an attribute is a picture of a track, not the
+track. Section 2.2.3 ("Joining the dots") is the place to mine for the
+long version's account of what the sp/GIS model could not hold.
+
+## 4. The parent grid with child windows (pp. 91-95)
+
+> "A 'parent' grid encompassing the entire region is defined with a
+> given grain size and offset. This is then treated as a virtual 3D
+> array, without requiring that the parent matrix be duplicated for
+> every time step. [...] A spatial 'child' window of each time step is
+> stored to encompass only the samples for each estimate."
+
+> "This is in effect a three-dimensional sparse array, where the X and Y
+> dimensions are regularly spaced and the third dimension corresponds
+> to the times t_i [...]. Only the smallest required subset is stored,
+> and so the binning is fast as we are not handling redundant empty
+> cells."
+
+That is a tile scheme (grout, vaster's TileScheme) and a chunked array
+with offsets, described without either word because neither existed in
+the vocabulary of the tools. Figure 5.3 ("Indexing scheme", p. 95) is a
+chunk index diagram. The recipe-not-payload principle is already here:
+the parent grid is six numbers, the children are offsets into it.
+
+## 5. Primary and intermediate locations (pp. 91-94)
+
+> "No existing study has made an explicit distinction between primary
+> locations that represent purpose-measured data and intermediate times
+> between these. [...] The intermediate locations are truly continuous
+> in that each individual element represents the entire interval between
+> each subsequent primary location."
+
+The measured point is discrete and the interval between is continuous;
+the representation must hold both. For the long version this is the
+same shape as "the value is at the cell, the geometry is between the
+cells" and is the reason a track is a mesh problem, not a point
+problem. Figures 5.1 and 5.2 (pp. 93-94) are the pictures.
+
+## 6. The divide in data representation, named as the cause (p. 90)
+
+> "The limited support for continuous variables in GIS vector was
+> discussed in Chapter 2. The crossover of these research domains is
+> rare partly because of this divide in data representation, but is
+> increasingly relevant due to multi-disciplinary studies."
+
+This is the article's "modal thinking" claim in its original form: a
+divide in representation produces a divide in communities. In 2011 the
+two domains were tracking ecology and oceanography; in 2026 they are
+ESM visualisation and imagery. Same mechanism.
+
+## 7. Slabs versus points (pp. 104-106)
+
+> "Data interfaces generally use one of two types: direct manipulation
+> of 'slabs' of array data, or database-like lookup of exact samples
+> queried by 3D or 4D track coordinates."
+
+> "Point samples provide a direct overlay of single coordinates with an
+> arrayed data set. In its own right this is very simple, but include
+> requirements for interpolation to exact coordinates and dynamic
+> interaction and the common slab implementations are lacking. This is
+> analogous to the deficiencies of topological data identified in
+> Chapter 2 -- decisions or habits established at one level have serious
+> ramifications for the simplest next level of generalization."
+
+Slab access is the warp stance (read a window, resample it); point
+lookup is the cell stance (invert position to index, read one value).
+The thesis wanted both and had neither in a usable form; "decisions or
+habits established at one level have serious ramifications" is modal
+thinking stated as a mechanism. The three access types listed on p. 105
+(slab in memory, compressed masks, database) are a 2009 sketch of
+chunked object storage, bitmask overviews, and a query engine. xyt,
+planned-extraction and the Icechunk work are the point-lookup side of
+this finally being built; rangefinder's windowed reads are the slab
+side.
+
+## 8. Projections (p. 26)
+
+> "Despite the wide availability of software tools for working with map
+> projections their use is still virtually non-existent in modern
+> tracking studies."
+
+Footnote 7 lists PROJ, rgdal, Manifold, GMT. For the long version's
+projection section (sidebyside page 07), the point is that the tools
+existed and the habit did not; the same is true of the cell side's
+d3-geo list today.
+
+## 9. The tools acknowledged (acknowledgements, p. vii)
+
+> "To build the document figures and displayed code I have used R 2.12.0
+> with the following packages: MASS, mgcv, deldir, spatstat, lattice,
+> sp, rgdal, maptools, geosphere, zoo, maps, mapdata, RODBC and ff."
+
+deldir and spatstat are the mesh and the pixellation; sp, rgdal and
+maptools are the modal type system; ff is memory-mapped arrays, the
+2009 answer to the slab problem (Section 6.5, "Large data set
+example"). The tripGrid code on pp. 42-45 is a worked example of the
+SpatialGridDataFrame era: a grid is a data frame of cells with a
+GridTopology, exactly the "raster that is secretly a table" the article
+describes.
+
+## What the long version should do with this
+
+- Replace the article's one-paragraph sp/rgdal account with a section
+  that quotes 1, 3, 6 and 7 and dates them: the divide was named in
+  2009-2011, by someone inside the sp world, as a representation
+  problem, and the mesh (2) was the known fix set aside for cost.
+- Use 4 as the origin of the tile-scheme line (trip's parent/child
+  grid -> raster/terra blocks -> grout -> vaster TileScheme -> aatgrid),
+  which is the warp stance's own recipe-not-payload lineage.
+- Use 5 to argue that tracks, meshes and DGGS cells are one family: a
+  value at a sample, geometry derived between samples.
+- Keep the 2017 post as the mid-point: sf arrived, the vector side got
+  sharper, the divide got wider, the list of what sf could not hold
+  (tracks, meshes, networks) is the list from 2011 unchanged.
