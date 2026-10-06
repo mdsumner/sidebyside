@@ -198,6 +198,41 @@ sp paragraph and should replace it once checked.
   considered it. A nine-year-old private gist holds the earlier sp
   version of the same complaint (does not mention 2430).
 
+## 11. The 2017 gist (simple-frust-private.md; private, with 2020 and 2025 comments)
+
+Nine years old, edited a few times. Many of its specific complaints were
+later dealt with "because some motivated user pursued them". For the
+long version, quote the structural sentences only; the 2020 comments
+are heat, the gist is private for a reason, and the argument is
+stronger without them. The Dec 2025 comment shows the heat cooled and
+is the one to end on.
+
+- Conflation, third instance: "The two issues of many features and
+  many columns are completely independent but become completely
+  confounded here." Same failure as SpatialPixels (regularity vs
+  sparsity) and rangefinder's geometry types (regular vs has coordinate
+  arrays): a type fusing two orthogonal properties so neither can be
+  expressed alone. Candidate single technical thesis for the long
+  version, with modal thinking as its social consequence.
+- Topology vs geometry: "The relationship between topology and geometry
+  is confused, while these are rightly decoupled and have dimension in
+  ways that are independent they are usually conflated to mean the same
+  thing." And: "Simple features are completely described as paths";
+  PATH as "a stepping stone to the PRIMITIVES". The 2009 mesh
+  parenthesis returning as a plan; recipe-not-payload in 2017 clothes.
+- The seam, named: "'We use sf format but not sf itself' is itself an
+  emerging standard." Exactly the shape sidebyside argues for: shared
+  formats and readers, divergent renderers. "sf should import
+  sfheaders" is the extension that did not happen; issue 2430 is the
+  one that eventually did, by accident.
+- Closing note (Dec 2025): "most of the bad choices by sf were unmade
+  and made better by terra", with gdalraster + wk + geos as the
+  development-grade path. Together with "many things have been dealt
+  with because some motivated user pursued them", this lets the
+  history end honestly: modal thinking is real, and it is eroded by
+  individuals who refuse the mode, which is what the bridges in
+  sidebyside are.
+
 ## What the long version should do with this
 
 - Replace the article's one-paragraph sp/rgdal account with a section
