@@ -80,8 +80,12 @@ reading the source, not by reading the picture.
 The second is a drape, and a drape is exactly what gridlook does with
 cells: values as read, geometry derived late, picture as a side effect.
 So within the sidebyside suite, ortho-cog-viewer and gridlook are closer
-to each other than ortho-cog-viewer is to rwarp. rwarp is the only
-thing in the suite that produces data rather than a view.
+to each other than ortho-cog-viewer is to rwarp. And rangefinder, which
+looks like a drape, is not one: its reads resample onto the view's grid
+(nearest neighbour, with the rules written down) and hand back typed
+arrays, which is why it can export a GeoTIFF and ortho-cog-viewer
+cannot. The honest split is gridlook and ortho-cog-viewer drape;
+rangefinder and rwarp materialise, cheaply and expensively.
 
 That matters for the bridges. "Publish coarser siblings so gridlook can
 show a 650-million-cell field" is a materialised warp, done once by the
