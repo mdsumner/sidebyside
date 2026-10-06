@@ -7,19 +7,19 @@
     "cors": true
   },
   "left": {
-    "label": "warp: rwarp wasm slippy map",
-    "url": null,
-    "note": "rwarp-wasm demo URL to be filled in (GitHub Pages deployment of the rwarp-wasm subcrate, GIBS 3031 preset)."
+    "label": "warp: ortho-cog-viewer (WMTS/XYZ source draped on a mesh in EPSG:3031)",
+    "url": "https://mdsumner.github.io/ortho-cog-viewer/",
+    "note": "Permalink pending: GIBS EPSG:3031 or LIST AerialPhoto2026 WMTS on the polar stereographic preset."
   },
   "right": {
     "label": "cell: gridlook",
     "url": null,
     "note": "gridlook has no XYZ/WMTS/ArcGIS tile ingestion, and its projection list is d3-geo's, so a tile service in EPSG:3031 cannot be loaded or viewed in its native CRS."
   },
-  "gap": "Tile services and arbitrary projected CRSs are outside gridlook's model; it starts from lon/lat (or 3857) arrays.",
+  "gap": "Tile services and arbitrary projected CRSs are outside gridlook's model; it starts from lon/lat (or 3857) arrays. Both sides drape (texture over a mesh vs cells on a sphere), so the difference here is purely what can be ingested and which CRS the view can take.",
   "bridge": "A shared tile-source module (XYZ, WMTS GetCapabilities, ArcGIS cached) that both shells can use, and crsDefinition as a common CRS authority with proj4js/proj-wasm behind it.",
   "todo": [
-    "fill in left.url with the rwarp-wasm demo and its GIBS 3031 preset",
-    "consider a second left panel variant using ortho-cog-viewer's WMTS source on the LIST layer"
+    "record the ortho-cog-viewer permalink for the GIBS 3031 or LIST WMTS preset in left.url, and drop left.note",
+    "rwarp's wasm warp is a materialised warp, not a drape; it belongs on page 03 (coarser siblings as data), not here"
   ]
 }
