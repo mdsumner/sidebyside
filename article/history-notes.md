@@ -184,6 +184,20 @@ sp paragraph and should replace it once checked.
   unextendable, so disagreement had to become a separate package
   ecosystem.
 
+  One independent verification for sf: r-spatial/sf issue 2430,
+  "plot() not anticipating subclasses" (31 Aug 2024). Subclassing an
+  sfc object and calling plot() failed inside st_is_empty() with
+  "Not compatible with STRSXP: [type=NULL]"; the reporter: "This makes
+  it difficult to write extensions to the sf package." Closed in
+  September 2025 as no longer reproducible, "solved as a byproduct" of
+  commit 436c293, mechanism unclear. The exact form of the claim is
+  therefore: extension failed in practice because internals checked
+  shipped class names, and when it started working it was by accident,
+  not design. That is a cleaner illustration of modal thinking than a
+  flat "cannot": nobody decided to block extension, the code never
+  considered it. A nine-year-old private gist holds the earlier sp
+  version of the same complaint (does not mention 2430).
+
 ## What the long version should do with this
 
 - Replace the article's one-paragraph sp/rgdal account with a section
