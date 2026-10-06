@@ -233,6 +233,36 @@ is the one to end on.
   individuals who refuse the mode, which is what the bridges in
   sidebyside are.
 
+## 12. SpatialNLines, and the bundle of small prerequisites (from memory, Oct 2026)
+
+Two things to recover from the old disk (nested backups to 2002; look
+next week): a directory named something like SpatialNLines<expletive>,
+and the exchange it came from.
+
+The episode: asking sp for lines of dimension n > 2 (3, 4, any), and
+being told to write a class for it. Technically true, practically a
+fork: the n = 2 assumption was in every method, so one new class meant
+re-implementing the dispatch tree. The advice was sincere and the
+obstacle was structural, and both were true at once; the long version
+should say both. rgdal was one stop-line's removal from reading a 3D
+shapefile. This is a better example than SpatialPixels because the
+response is itself the mechanism, not just the symptom.
+
+The general form, which is the thesis under "modal thinking": the
+barrier is never one hard thing. It is three to five small things, none
+challenging, each of which only shows its value once the others exist,
+so no single one can be justified to a maintainer, reviewer or funder.
+The pieces are cheap and the bundle is expensive, and the expense is
+coordination, not code. Instances: 3D shapefiles in sp/rgdal; Zarr in
+R needing get-refs + gdalraster mdim + a virtual store + a viewer.
+What changed in the last year is not that the pieces got easier but
+that the cost of doing four small things at once dropped below the
+threshold where each needs separate justification. sidebyside's pages
+do the same job by hand: each page makes one piece of a bundle show
+its value alone (a picture, a gap closed), so the bundle can be built
+one justifiable step at a time. Page 02 is a four-thing bundle written
+as four todo lines.
+
 ## What the long version should do with this
 
 - Replace the article's one-paragraph sp/rgdal account with a section
