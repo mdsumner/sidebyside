@@ -158,6 +158,27 @@ SpatialGridDataFrame era: a grid is a data frame of cells with a
 GridTopology, exactly the "raster that is secretly a table" the article
 describes.
 
+## 10. Two diagnoses from memory, not from the thesis (Oct 2026)
+
+Stated in conversation; sharper than the article's current sp
+paragraph and should replace it.
+
+- SpatialPixels conflated non-regularity with sparsity. Whether cells
+  lie on a regular lattice and whether all cells are present are
+  independent properties; a type that fuses them can represent neither
+  cleanly. The same conflation is why rangefinder could not see a
+  HEALPix store in 2026: its geometry types fuse "regular" with "has
+  coordinate arrays", and a HEALPix grid is regular with none.
+- sp could not be extended despite its S4 foundation: the generics were
+  written for the shipped classes, so a new representation could not
+  join the dispatch. sf repeated this with S3: print, plot and the st_*
+  generics are hardcoded to the shipped sfc types. A type system that
+  cannot be extended turns a representation choice into a community
+  boundary. That is the mechanism behind "modal thinking": not that
+  people chose a model, but that the tools made the model
+  unextendable, so disagreement had to become a separate package
+  ecosystem.
+
 ## What the long version should do with this
 
 - Replace the article's one-paragraph sp/rgdal account with a section
