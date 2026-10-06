@@ -160,8 +160,13 @@ describes.
 
 ## 10. Two diagnoses from memory, not from the thesis (Oct 2026)
 
-Stated in conversation; sharper than the article's current sp
-paragraph and should replace it.
+Stated in conversation from memory, close to but not verified against
+the record. Before either goes into the long version, look up the
+specifics (Dropbox or svn cache from the sp era): for SpatialPixels, the
+class definition and points2grid's handling of gaps, and whatever
+thread prompted the realisation; for the generics, one concrete method
+that could not be made to dispatch. Sharper than the article's current
+sp paragraph and should replace it once checked.
 
 - SpatialPixels conflated non-regularity with sparsity. Whether cells
   lie on a regular lattice and whether all cells are present are
