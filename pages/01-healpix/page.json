@@ -1,15 +1,15 @@
 {
   "title": "HEALPix on both",
-  "status": "warp-gap",
+  "status": "shared",
   "dataset": {
     "name": "DKRZ EERIE future ssp245, P1M mean, HEALPix level 7 (Zarr; from gridlook's shipped catalog)",
     "url": "https://s3.waterpark.dkrz.de/eerie/eerie-future-ssp245-v20240618_P1M_mean_7.zarr",
     "cors": true
   },
   "left": {
-    "label": "warp: ortho-cog-viewer",
-    "url": null,
-    "note": "rangefinder opens the store and refuses the variable: \"pr: no 1D coordinate arrays for cell / time\", after 404s on cell/.zarray and cell/zarr.json. There is no coordinate array because a HEALPix cell's position is implied by its index, level and scheme; the geometry is a recipe, not arrays, and the warp side only reads arrays. Plan: docs/rangefinder-healpix.md in this repo."
+    "label": "warp: rangefinder (HEALPix via lib/dggs.js: view pixels to cell ids, inverse sampling)",
+    "url": "https://hypertidy.github.io/rangefinder/#src=zarr&zarr=https%3A%2F%2Fs3.waterpark.dkrz.de%2Feerie%2Feerie-future-ssp245-v20240618_P1M_mean_7.zarr&zvar=pr",
+    "note": "Provisional permalink (variable, day and stretch not yet recorded). rangefinder reads HEALPix since Oct 2026 by inverting the view: each output pixel centre to lon/lat to cell id (healpix-geo) to a chunk index; no mesh."
   },
   "right": {
     "label": "cell: gridlook",
@@ -17,11 +17,11 @@
     "gridlook": "hosted",
     "note": "Loaded through gridlook.pages.dev until the vendored build is confirmed to reach this host from the sidebyside origin."
   },
-  "gap": "The warp side has DGGS on the analysis side (trend.sst: S2 cells plus Parquet) and none on the rendering side; the cell side has DGGS on the rendering side (HEALPix via the Zarr DGGS convention) and nothing on the analysis side. Neither can draw the other's cells.",
-  "bridge": "HEALPix has an inverse (lon/lat to cell id), so the warp side can sample it the way it samples an affine grid: view pixel centres to cell ids in one healpix-geo call, then index the chunk. No mesh needed. Plan in docs/rangefinder-healpix.md; S2 via the same geometry object brings trend.sst cells, making the page shared from both ends.",
+  "gap": "Both sides draw a HEALPix field by different routes: gridlook builds a cell mesh on the sphere, rangefinder inverts the view and samples the chunk. Before Oct 2026 the warp side refused the store (\"no 1D coordinate arrays for cell / time\"); the refusal is kept in docs/rangefinder-healpix.md as the record of the gap. The remaining asymmetry is on the analysis side: trend.sst's S2 cells have no renderer on either side.",
+  "bridge": "S2 as a second cellsOf in rangefinder's v.dggs object (the shape was built for this), with a trend.sst Parquet as the fixture; and a HEALPix-to-tile-scheme recipe so ortho-cog-viewer and rwarp can see cells too.",
   "todo": [
-    "implement docs/rangefinder-healpix.md in hypertidy/rangefinder (step 1, the specific error message, can ship alone)",
+    "open the EERIE store in rangefinder, pick pr and a month, record the full permalink in left.url and drop left.note",
     "test the vendored gridlook build against s3.waterpark.dkrz.de; if it loads, drop gridlook: hosted and this page is on the pin",
-    "stage a small trend.sst S2-cell Parquet (one period, one variable) on a CORS bucket as the second warp-side dataset; see https://github.com/mdsumner/trend.sst"
+    "stage a small trend.sst S2-cell Parquet (one period, one variable) on a CORS bucket; S2 cellsOf in rangefinder"
   ]
 }

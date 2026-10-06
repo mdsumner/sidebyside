@@ -1,26 +1,25 @@
 {
   "title": "An Icechunk store in the browser",
-  "status": "warp-gap",
+  "status": "shared",
   "dataset": {
-    "name": "A public Icechunk store (ACCESS-NRI virtualized dataset, or a small test store)",
-    "url": null,
-    "cors": false
+    "name": "NOAA GFS analysis, hourly from 2021, 0.25 degree, Icechunk repository (Zarr v3, sharded, native chunks) from dynamical.org on AWS",
+    "url": "https://dynamical-noaa-gfs.s3.amazonaws.com/noaa-gfs-analysis/v0.1.0.icechunk",
+    "cors": true
   },
   "left": {
-    "label": "warp: rangefinder",
-    "url": null,
-    "note": "No Icechunk reader on the warp side yet. rangefinder already reads plain Zarr, Kerchunk JSON and Kerchunk Parquet references through one store seam; Icechunk is a fourth store kind behind that seam. Plan: docs/rangefinder-icechunk.md in this repo."
+    "label": "warp: rangefinder (icechunk-js as a store kind; snapshot pinned in the permalink)",
+    "url": "https://hypertidy.github.io/rangefinder/#src=zarr&zarr=https%3A%2F%2Fdynamical-noaa-gfs.s3.amazonaws.com%2Fnoaa-gfs-analysis%2Fv0.1.0.icechunk&zvar=temperature_2m",
+    "note": "Provisional permalink; variable name to confirm from the picker, and the snapshot id the branch resolved to should appear in the hash."
   },
   "right": {
-    "label": "cell: gridlook",
-    "url": null,
-    "note": "gridlook reads Icechunk stores and groups via icechunk-js (v1.1, v1.3). Right panel URL to be filled once a public CORS-enabled store exists."
+    "label": "cell: gridlook (icechunk-js since v1.1)",
+    "url": "{GRIDLOOK}#https://dynamical-noaa-gfs.s3.amazonaws.com/noaa-gfs-analysis/v0.1.0.icechunk"
   },
-  "gap": "Icechunk is a first-class source for gridlook and absent from the warp side.",
-  "bridge": "icechunk-js (the same reader gridlook uses) as a fourth store kind in rangefinder's openDataset; the plan is written and the work is mostly fixtures and Zarr v3 metadata details. See docs/rangefinder-icechunk.md.",
+  "gap": "Shared ground as of Oct 2026: both sides read Icechunk through icechunk-js. The difference is what each does with the version: rangefinder resolves the branch to a snapshot and pins it in the permalink; gridlook opens the branch head.",
+  "bridge": "Snapshot-in-URL as a convention both viewers honour, so a shared link means the same bytes later. Virtual-chunk repos (source.coop ocean-icechunks, chunks at NCEI) are the next test: NCEI sends no CORS headers, so neither side can read them from a browser until the provider does.",
   "todo": [
-    "implement docs/rangefinder-icechunk.md in hypertidy/rangefinder (sections 2-4 first, against a self-written fixture)",
-    "ask for or create a small public Icechunk store on a CORS bucket; the ACCESS-NRI virtualization work is the natural candidate",
-    "set right.url to {GRIDLOOK}#<store url> and left.url to the rangefinder permalink; page becomes shared"
+    "confirm both panels draw the GFS repo; record the rangefinder permalink with snapshot in left.url",
+    "a public ACCESS-NRI Icechunk store would make this page Australian; ask Charles",
+    "note the HRRR repo (CONUS Lambert conformal) as a second fixture: a projected CRS in an Icechunk store"
   ]
 }

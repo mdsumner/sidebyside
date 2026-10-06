@@ -18,6 +18,6 @@
   "bridge": "Lift rangefinder's curvilinear.js (corners from geoloc arrays, cell rasterisation) into the shared reads module so ortho-cog-viewer and rwarp get it for free; the cell-mesh renderer (anglr-style) stays the better long-term target for the warp shells.",
   "todo": [
     "confirm the curvilinear detection fires in the vendored gridlook build (it is in their shipped catalog tagged curvilinear)",
-    "later: swap in a BRAN or ACCESS-OM slice once one is staged on a CORS bucket, so the page uses Australian data"
+    "Australian data: rangefinder's picker has BRAN2023 (CSIRO Bluelink) as Kerchunk Parquet over NCI THREDDS; that is warp-side only, since gridlook does not read Kerchunk Parquet. A plain Zarr or Icechunk copy of one BRAN slice would let both sides draw it"
   ]
 }

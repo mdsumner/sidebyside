@@ -29,17 +29,19 @@ The short explainer the pages are evidence for.
 
 | # | Page | Dataset | Gap on | Gap | Bridge |
 |---|------|---------|---------------|-----|--------|
-| 01 | healpix | DKRZ EERIE HEALPix level 7 (Zarr); trend.sst S2 cells as a second source | warp | DGGS on the warp analysis side (trend.sst) and the cell rendering side, never both | invert the view: pixel centres to cell ids via healpix-geo, then index the chunk (docs/rangefinder-healpix.md) |
+| 01 | healpix | DKRZ EERIE HEALPix level 7 (Zarr) | shared | both draw it: cell mesh vs inverse sampling (rangefinder, Oct 2026); S2 cells still have no renderer | S2 as a second cellsOf; HEALPix-to-tile-scheme for the warp shells |
 | 02 | cog | Sentinel-2 L2A COG, tile 55GEN | cell | gridlook reads GeoTIFF only as a WGS84 overlay texture, not as data | virtual Zarr/Icechunk view over the COG from `gdal mdim get-refs` / blocklist |
-| 03 | big-array | GHRSST MUR 0.01 deg SST as Zarr, no hierarchy | cell | whole-field reads at one dimension index; no spatial windowing | publish coarser siblings (LOD as a data product) the way DKRZ publishes z-levels, produced by grout |
+| 03 | big-array | GHRSST MUR 0.01 deg SST, Zarr on AWS, no hierarchy | cell | whole-field reads at one dimension index; no spatial windowing | publish coarser siblings (LOD as a data product) the way DKRZ publishes z-levels, produced by grout |
 | 04 | polar | GIBS EPSG:3031 / LIST WMTS tiles draped on polar stereo | cell | no tile-service ingestion; projections limited to d3-geo | shared tile-source module; `crsDefinition` as a common CRS authority |
 | 05 | curvilinear | CMIP6 GFDL-ESM4 tos, tripolar with 2D lon/lat (BRAN later) | shared | both draw it: cells on the sphere vs cells rasterised then warped; ortho-cog-viewer/rwarp cannot | lift rangefinder's curvilinear.js into the shared reads module |
-| 06 | icechunk | an Icechunk store (ACCESS-NRI) | warp | no Icechunk reader on the warp side | icechunk-js as a fourth store kind in rangefinder; plan in docs/rangefinder-icechunk.md |
+| 06 | icechunk | NOAA GFS Icechunk repo (dynamical.org, AWS) | shared | both read Icechunk via icechunk-js; rangefinder pins the snapshot, gridlook opens the branch head | snapshot-in-URL as a shared convention; virtual-chunk repos wait on provider CORS |
 | 07 | projections | Blue Marble vs CMIP6 HadGEM3 tas | shared | d3-geo list vs proj4js + proj-wasm (interrupted Goode, tpers, omerc) | proj-wasm as a shared resolver on an unknown-code miss |
 
-Pages 01 and 06 are gaps on the warp side; 02, 03 and 04 are gaps on
-the cell side; 05 and 07 are shared ground reached by different routes.
-Keep it balanced. Plans for closing a gap live in docs/.
+As of 6 Oct 2026: 02, 03 and 04 are gaps on the cell side; 01, 05, 06
+and 07 are shared ground reached by different routes. 01 and 06 moved
+from warp-gap to shared in one day when rangefinder gained HEALPix and
+Icechunk readers from the plans in docs/. The balance has tipped; the
+next pages to add should be ones where the cell side is ahead.
 
 ## How a page works
 
