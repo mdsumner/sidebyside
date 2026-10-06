@@ -1,8 +1,16 @@
 # Notes for the long version: what the 2011 thesis already said
 
 Source: Sumner, M. D. (2011). The tag location problem. PhD thesis,
-IMAS, University of Tasmania. Written 2008-2010 with R 2.12.0, sp,
-rgdal, maptools, spatstat. Page numbers are the thesis's own.
+IMAS, University of Tasmania. Submitted May 2011; the work began in
+2002, in earnest from 2003; Chapter 3 is Sumner, Wotherspoon and
+Hindell (2009), PLoS ONE 4(10):e7324, after a long review history.
+Built with R 2.12.0, sp, rgdal, maptools, spatstat. Page numbers are
+the thesis's own.
+
+Dating matters for the long version: the representation arguments in
+Chapters 2, 5 and 6 were formed across 2003-2009, which is the whole
+sp era (sp 0.7 appeared in 2005), so they are a contemporary reaction
+to that type system, not hindsight.
 
 These are the passages that map onto the warp / cell / drape vocabulary
 of article/README.md, with the mapping stated. For the hypertidy long
