@@ -140,3 +140,27 @@ One allonboard layer that takes a rangefinder catalogue entry (a plain
 JSON object: source kind, URL, variable, CRS) and draws it as a draped
 texture in the current view. Everything in sections 2 to 5 is then a
 matter of adding entries to the catalogue, not code to allonboard.
+
+## 8. Answered (allboa/design PR 21, decision 0010, 6 Oct 2026)
+
+- Polar drape in deck.gl: yes. One SimpleMeshLayer per tile, mesh in the
+  view CRS, OrthographicView of EPSG:3031 metres; clean at the pole and
+  the antimeridian. deck.gl-raster's tiled traversal is Mercator-only and
+  is not used. So section 6's first question is closed and allonboard is
+  a third warp-side shell.
+- Texture versus values: both, kept apart in the input contract. The
+  decision notes that rangefinder's readWarped() is a materialised warp
+  (nearest neighbour onto the output grid, typed arrays out) while
+  allonboard's tiled raster is a drape. The article's "rwarp is the only
+  materialiser" line was wrong and has been corrected.
+- Cells: a cells layer type (Arrow column of ids plus scheme and level),
+  expanded in the browser and projected to the view CRS, because deck.gl's
+  S2Layer and H3HexagonLayer assume lon/lat. HEALPix first, S2 second.
+- Two recipe routes, R-planned (GDAL describes byte ranges) and
+  browser-resolved (rangefinder's source modules), with the chunk
+  reference (URL, offset, length, codec, grid position) as the currency
+  both share. The scene spec names that currency, not a file format, and
+  owns the catalogue entry; rangefinder is its first reader.
+- Open on their side: bundling versus CDN loading for the JavaScript
+  readers (an embedded page opened offline cannot use a CDN), which
+  argues for an npm publish of rangefinder's sources.
