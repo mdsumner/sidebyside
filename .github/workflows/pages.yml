@@ -49,6 +49,7 @@ jobs:
         run: |
           mkdir -p _site/gridlook
           cp -r index.html sbs.css sbs.js pages _site/
+          mkdir -p _site/gearbox && cp gearbox/index.html _site/gearbox/
           cp -r gridlook-src/dist/. _site/gridlook/
           printf '{\n  "gridlookBase": "gridlook/",\n  "pinned": "%s"\n}\n' "${{ steps.pin.outputs.tag }}" > _site/config.json
           touch _site/.nojekyll

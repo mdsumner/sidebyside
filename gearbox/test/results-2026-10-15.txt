@@ -1,0 +1,130 @@
+##### DPR=1
+== src=http://127.0.0.1:8765/fx/mosaic.vrt&display=EPSG:3031
+ view 1 1.4 km/px at -84.83, -45.00 (EPSG:3031)
+    deck.gl-raster defaults | base 250 m, read at 1.0 km [25] | files 16 req 32 bytes 3145760 calls 0 
+    recipe reader | base 250 m, read at 1.0 km [25] | files 17 req 33 bytes 3211297 calls 0 
+ view 2 5.4 km/px at -84.83, -45.00 (EPSG:3031)
+    deck.gl-raster defaults | base 250 m [17]; base 250 m, read at 1.0 km [3] | files 0 req 0 bytes 0 calls 0 refused
+    recipe reader | ovr 2.0 km [16]; ovr 2.0 km, read at 4.0 km [4] | files 0 req 0 bytes 0 calls 0 
+ view 3 340 m/px at -84.83, -45.00 (EPSG:3031)
+    deck.gl-raster defaults | base 250 m [16] | files 0 req 10 bytes 2621451 calls 0 
+    recipe reader | base 250 m [16] | files 0 req 12 bytes 2621452 calls 0 
+ view 4 85 m/px at -84.83, -45.00 (EPSG:3031)
+    deck.gl-raster defaults | base 250 m [20] | files 0 req 0 bytes 0 calls 0 
+    recipe reader | base 250 m [20] | files 0 req 0 bytes 0 calls 0 
+== src=http://127.0.0.1:8765/fx/mosaic.vrt&display=EPSG:3857
+ view 1 15 km/px at -82.76, -45.00 (EPSG:3857)
+    deck.gl-raster defaults | base 250 m, read at 1.0 km [12]; base 250 m [6]; base 250 m, read at 500 m [6] | files 15 req 38 bytes 6094886 calls 39240 
+    recipe reader | ovr 2.0 km [12]; base 250 m, read at 1.0 km [12] | files 15 req 31 bytes 3342367 calls 39240 
+ view 2 61 km/px at -82.76, -45.00 (EPSG:3857)
+    deck.gl-raster defaults | base 250 m [11]; base 250 m, read at 1.0 km [5] | files 1 req 1 bytes 327684 calls 1451568 refused
+    recipe reader | ovr 2.0 km [13]; ovr 2.0 km, read at 4.0 km [3] | files 0 req 0 bytes 108745 calls 26160 
+ view 3 3.8 km/px at -82.76, -45.00 (EPSG:3857)
+    deck.gl-raster defaults | base 250 m [24] | files 0 req 25 bytes 7659551 calls 39240 
+    recipe reader | base 250 m [18]; base 250 m, read at 500 m [6] | files 0 req 30 bytes 8511526 calls 39240 
+ view 4 950 m/px at -82.76, -45.00 (EPSG:3857)
+    deck.gl-raster defaults | base 250 m [24] | files 0 req 0 bytes 0 calls 39240 
+    recipe reader | base 250 m [24] | files 0 req 0 bytes 0 calls 39240 
+== src=http%3A%2F%2F127.0.0.1%3A8765%2Ffx%2Fxyz%2F%7Bz%7D%2F%7Bx%7D%2F%7By%7D.png%23maxz%3D3&display=EPSG:3031
+ view 1 14 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | z3 (20 km) [4] | files 0 req 32 bytes 41711 calls 46072 
+    recipe reader | z2 (39 km) [4] | files 0 req 8 bytes 9960 calls 31480 
+ view 2 57 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | z2 (39 km) [1] | files 0 req 0 bytes 0 calls 29170 
+    recipe reader | z1 (78 km) [1] | files 0 req 0 bytes 0 calls 15346 
+ view 3 3.5 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | z3 (20 km) [8] | files 0 req 0 bytes 0 calls 153908 
+    recipe reader | z3 (20 km) [4]; z2 (39 km) [4] | files 0 req 0 bytes 20645 calls 153908 
+ view 4 885 m/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | z3 (20 km) [4] | files 0 req 0 bytes 0 calls 518432 
+    recipe reader | z3 (20 km) [4] | files 0 req 0 bytes 0 calls 518432 
+== src=http://127.0.0.1:8765/fx/stripes_4326.tif&display=EPSG:3031
+ view 1 14 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | 6' (full) [4] | files 1 req 2 bytes 2455433 calls 450792 
+    recipe reader | 12' (ovr 1) [4] | files 1 req 2 bytes 1179650 calls 306920 
+ view 2 57 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | 12' (ovr 1) [1] | files 0 req 0 bytes 1114113 calls 132146 
+    recipe reader | 24' (ovr 2) [1] | files 0 req 0 bytes 262145 calls 131634 
+ view 3 3.5 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | 6' (full) [8] | files 0 req 0 bytes 0 calls 75248 
+    recipe reader | 6' (full) [8] | files 0 req 0 bytes 1341320 calls 413168 
+ view 4 885 m/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | 6' (full) [8] | files 0 req 0 bytes 0 calls 37360 
+    recipe reader | 6' (full) [8] | files 0 req 0 bytes 0 calls 421872 
+== src=http://127.0.0.1:8765/fx/dome_3031.tif&display=EPSG:3857
+ view 1 60 km/px at -73.69, 1.79 (EPSG:3857)
+    deck.gl-raster defaults | 16 km (ovr 4) [8]; 4.0 km (ovr 2) [4]; 1.0 km (full) [4] | files 1 req 9 bytes 7667721 calls 26160 
+    recipe reader | 16 km (ovr 4) [8]; 8.0 km (ovr 3) [4]; 2.0 km (ovr 1) [4] | files 1 req 6 bytes 2818054 calls 26160 
+ view 2 238 km/px at -73.69, 1.79 (EPSG:3857)
+    deck.gl-raster defaults | 16 km (ovr 4) [1]; 1.0 km (full) [1] | files 0 req 0 bytes 0 calls 138438 
+    recipe reader | 16 km (ovr 4) [1]; 1.0 km (full) [1] | files 0 req 0 bytes 0 calls 3270 
+ view 3 15 km/px at -73.69, 1.79 (EPSG:3857)
+    deck.gl-raster defaults | 2.0 km (ovr 1) [10]; 4.0 km (ovr 2) [5]; 1.0 km (full) [5] | files 0 req 10 bytes 5373966 calls 32700 
+    recipe reader | 4.0 km (ovr 2) [10]; 2.0 km (ovr 1) [10] | files 0 req 4 bytes 1507334 calls 32700 
+ view 4 3.7 km/px at -73.69, 1.79 (EPSG:3857)
+    deck.gl-raster defaults | 1.0 km (full) [20] | files 0 req 0 bytes 0 calls 32700 
+    recipe reader | 1.0 km (full) [20] | files 0 req 0 bytes 0 calls 32700 
+##### DPR=2
+== src=http://127.0.0.1:8765/fx/mosaic.vrt&display=EPSG:3031
+ view 1 1.4 km/px at -84.83, -45.00 (EPSG:3031)
+    deck.gl-raster defaults | base 250 m, read at 500 m [64] | files 16 req 63 bytes 10420287 calls 0 
+    recipe reader | base 250 m, read at 1.0 km [64] | files 17 req 33 bytes 3211297 calls 0 
+ view 2 5.4 km/px at -84.83, -45.00 (EPSG:3031)
+    deck.gl-raster defaults | base 250 m [47]; base 250 m, read at 1.0 km [9] | files 0 req 0 bytes 327685 calls 0 
+    recipe reader | ovr 2.0 km [47]; ovr 2.0 km, read at 4.0 km [9] | files 0 req 0 bytes 0 calls 0 
+ view 3 340 m/px at -84.83, -45.00 (EPSG:3031)
+    deck.gl-raster defaults | base 250 m [56] | files 0 req 17 bytes 3604497 calls 0 
+    recipe reader | base 250 m [56] | files 0 req 17 bytes 3604497 calls 0 
+ view 4 85 m/px at -84.83, -45.00 (EPSG:3031)
+    deck.gl-raster defaults | base 250 m [63] | files 0 req 0 bytes 0 calls 0 
+    recipe reader | base 250 m [63] | files 0 req 0 bytes 0 calls 0 
+== src=http://127.0.0.1:8765/fx/mosaic.vrt&display=EPSG:3857
+ view 1 15 km/px at -82.76, -45.00 (EPSG:3857)
+    deck.gl-raster defaults | base 250 m [48]; base 250 m, read at 500 m [22] | files 15 req 79 bytes 20763392 calls 114450 
+    recipe reader | ovr 2.0 km [40]; base 250 m, read at 1.0 km [30] | files 15 req 31 bytes 3342367 calls 114450 
+ view 2 61 km/px at -82.76, -45.00 (EPSG:3857)
+    deck.gl-raster defaults | base 250 m [40]; base 250 m, read at 1.0 km [8] | files 0 req 0 bytes 983049 calls 2437776 
+    recipe reader | ovr 2.0 km [44]; ovr 2.0 km, read at 4.0 km [4] | files 0 req 0 bytes 0 calls 78480 
+ view 3 3.8 km/px at -82.76, -45.00 (EPSG:3857)
+    deck.gl-raster defaults | base 250 m [80] | files 0 req 27 bytes 5955618 calls 130800 
+    recipe reader | base 250 m [60]; base 250 m, read at 500 m [20] | files 1 req 37 bytes 9691183 calls 130800 
+ view 4 950 m/px at -82.76, -45.00 (EPSG:3857)
+    deck.gl-raster defaults | base 250 m [80] | files 0 req 0 bytes 0 calls 130800 
+    recipe reader | base 250 m [80] | files 0 req 0 bytes 0 calls 130800 
+== src=http%3A%2F%2F127.0.0.1%3A8765%2Ffx%2Fxyz%2F%7Bz%7D%2F%7Bx%7D%2F%7By%7D.png%23maxz%3D3&display=EPSG:3031
+ view 1 14 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | z3 (20 km) [16] | files 0 req 32 bytes 41711 calls 85344 
+    recipe reader | z2 (39 km) [8]; z3 (20 km) [4]; z1 (78 km) [4] | files 0 req 26 bytes 33132 calls 85344 
+ view 2 57 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | z2 (39 km) [1] | files 0 req 0 bytes 0 calls 29170 
+    recipe reader | z0 (157 km) [1] | files 0 req 0 bytes 0 calls 15346 
+ view 3 3.5 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | z3 (20 km) [24] | files 0 req 0 bytes 0 calls 531484 
+    recipe reader | z3 (20 km) [12]; z2 (39 km) [12] | files 0 req 16 bytes 20645 calls 531484 
+ view 4 885 m/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | - | files 0 req 0 bytes 0 calls 0 
+    recipe reader | - | files 0 req 0 bytes 0 calls 0 
+== src=http://127.0.0.1:8765/fx/stripes_4326.tif&display=EPSG:3031
+ view 1 14 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | 6' (full) [16] | files 1 req 2 bytes 2455433 calls 244704 
+    recipe reader | 12' (ovr 1) [14]; 24' (ovr 2) [2] | files 1 req 6 bytes 1310726 calls 397792 
+ view 2 57 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | 12' (ovr 1) [1] | files 0 req 0 bytes 0 calls 132146 
+    recipe reader | 48' (ovr 3) [1] | files 0 req 0 bytes 0 calls 131634 
+ view 3 3.5 km/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | 6' (full) [24] | files 0 req 0 bytes 0 calls 65008 
+    recipe reader | 6' (full) [20]; 12' (ovr 1) [4] | files 0 req 4 bytes 1310725 calls 443376 
+ view 4 885 m/px at -90.00, 0.00 (EPSG:3031)
+    deck.gl-raster defaults | 6' (full) [24] | files 0 req 0 bytes 0 calls 62960 
+    recipe reader | 6' (full) [20]; 12' (ovr 1) [4] | files 0 req 0 bytes 0 calls 448496 
+== src=http://127.0.0.1:8765/fx/dome_3031.tif&display=EPSG:3857
+ view 1 60 km/px at -73.69, 1.79 (EPSG:3857)
+    deck.gl-raster defaults | 16 km (ovr 4) [24]; 8.0 km (ovr 3) [8]; 4.0 km (ovr 2) [8]; 2.0 km (ovr 1) [8]; 1.0 km (full) [8] | files 1 req 27 bytes 14417947 calls 91560 
+    recipe reader | 16 km (ovr 4) [40]; 4.0 km (ovr 2) [8]; 2.0 km (ovr 1) [8] | files 1 req 9 bytes 4063241 calls 91560 
+ view 3 15 km/px at -73.69, 1.79 (EPSG:3857)
+    deck.gl-raster defaults | 1.0 km (full) [54]; 2.0 km (ovr 1) [18] | files 0 req 20 bytes 9502747 calls 117720 
+    recipe reader | 2.0 km (ovr 1) [36]; 4.0 km (ovr 2) [27]; 8.0 km (ovr 3) [9] | files 0 req 7 bytes 2424842 calls 117720 
+ view 4 3.7 km/px at -73.69, 1.79 (EPSG:3857)
+    deck.gl-raster defaults | 1.0 km (full) [63] | files 0 req 2 bytes 393218 calls 103005 
+    recipe reader | 1.0 km (full) [63] | files 0 req 3 bytes 983043 calls 103005 
+ ERR timeout after zoom 0

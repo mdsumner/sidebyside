@@ -27,6 +27,20 @@ The short explainer the pages are evidence for; `article/2026-10-06_warp-and-cel
 is the same piece formatted for the hypertidy.org Quarto blog, and
 `article/history-notes.md` holds the material for the longer version.
 
+## Gearbox
+
+`gearbox/`: one raster reader, two sets of defaults. A single HTML file
+with no build step that reads tile servers, COGs and VRT mosaics (with
+`<Overview>` entries) in the browser, draws each view twice, under
+deck.gl-raster's defaults and under a recipe reader's (or gdalwarp's), and
+counts the requests and bytes each panel spends. It compares two warp
+policies rather than warp and cell, so it sits beside the pages rather than
+among them. `gearbox/GUIDE.md` is a practical guide to what the differences
+suggest for browser raster libraries, with deck.gl-raster as the worked
+example (developmentseed/deck.gl-raster#695, #589, #601). Live at
+https://mdsumner.github.io/sidebyside/gearbox/ , e.g. `?src=rema` or
+`?src=gebco&display=EPSG:3031`.
+
 ## Pages
 
 | # | Page | Dataset | Gap on | Gap | Bridge |
