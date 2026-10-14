@@ -388,6 +388,9 @@ const PRESETS = [
   { group: 'COGs', id: 'eox', label: 'EOxCloudless 2024 (global, EPSG:4326, RGB)', url: 'https://s3.us-east-1.amazonaws.com/ds-deck.gl-raster-public/cog/viewing-basic_s2cloudless-2024_geodetic-zoom-3_3bands_8bit.tif', display: 'EPSG:3857' },
   { group: 'COGs', id: 'nasa3031', label: 'NASA Explorer base map (EPSG:3031, RGB)', url: S3COOP + '/scar/distant/supporting/EO-basemap_ps_cog.tif', display: 'EPSG:3031' },
   { group: 'COGs', id: 's2', label: 'Sentinel-2 TCI 55GEN (UTM 55S, RGB)', url: 'https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/55/G/EN/2024/12/S2A_55GEN_20241204_0_L2A/TCI.tif', display: 'EPSG:3857' },
+  { group: 'Scheme only (no data)', id: 'grid-rema', label: 'REMA 2 m grid, 512 px blocks (EPSG:3031)', url: 'grid:crs=EPSG:3031&extent=-2700100,-2500100,2750100,3342100&res=2&block=512', display: 'EPSG:3031', note: 'No data: the checkerboard is the block grid of whichever level each screen tile would read; the colour names the level.' },
+  { group: 'Scheme only (no data)', id: 'grid-gebco', label: 'GEBCO 15 arc-second grid, 256 px blocks (EPSG:4326)', url: 'grid:crs=EPSG:4326&extent=-180,-90,180,90&shape=86400,43200&block=256', display: 'EPSG:3031' },
+  { group: 'Scheme only (no data)', id: 'grid-s2', label: 'Sentinel-2 10 m tile, 1024 px blocks (UTM 55S)', url: 'grid:crs=EPSG:32755&extent=499980,5090200,609780,5200000&shape=10980,10980&block=1024', display: 'EPSG:3857' },
   { group: 'Antimeridian', id: 'dep', label: 'Pacific Landsat GeoMAD red, 12 COGs across 180 (VRT, EPSG:3832)', url: new URL('data/dep_ls_geomad_red_antimeridian.vrt', location.href).href, display: 'source', style: { palette: 'grey', min: 6000, max: 12000 }, note: 'Twelve 96 km tiles in Pacific Mercator, three of them across the antimeridian. Seamless in their own CRS and in the Pacific-centred displays; switch to Web Mercator or lon/lat to put the seam through them.' },
   { group: 'Antimeridian', id: 'dep4326', label: 'Same mosaic, drawn on lon/lat (the seam splits it)', url: new URL('data/dep_ls_geomad_red_antimeridian.vrt', location.href).href, display: 'EPSG:4326', style: { palette: 'grey', min: 6000, max: 12000 } },
   { group: 'Zarr', id: 'mur', label: 'GHRSST MUR SST 0.01 deg (Zarr v2, one level)', url: 'https://mur-sst.s3.us-west-2.amazonaws.com/zarr-v1#var=analysed_sst&sel=time:-1', display: 'EPSG:3857', fit: [143, -45, 150, -39], style: { palette: 'viridis', min: 281, max: 293 }, note: 'One big array with no pyramid: windowed reads work up close, and the page says no when zoomed out.' },
@@ -687,7 +690,19 @@ async function loadSource(spec) {
   const mz = /#maxz=(\d+)$/.exec(url);
   if (mz) { url = url.slice(0, mz.index); spec = Object.assign({}, spec, { url, tiles: Object.assign({}, spec.tiles || {}, { maxZ: +mz[1] }) }); }
   const src = { seq, url, spec, kind: null, style: Object.assign({ palette: 'grey', min: null, max: null }, spec.style || {}) };
-  if (/\{z\}/.test(url)) {
+  if (/^grid:/i.test(url)) {
+    const g = parseGridSpec(url);
+    await ensureCrs(/^\+proj=/.test(g.crs) ? await prepareCustom(g.crs) : g.crs);
+    src.kind = 'grid';
+    src.crs = /^\+proj=/.test(g.crs) ? await prepareCustom(g.crs) : g.crs;
+    src.grid = g;
+    src.cog = gridCog(g);
+    src.extent = g.extent;
+    src.rgba = true;
+    src.res = src.cog.res;
+    src.levels = src.cog.levels.map((L) => ({ name: fmtRes(L.res, isGeographic(src.crs)), res: L.res }));
+    src.dsn = 'grid (no data)';
+  } else if (/\{z\}/.test(url)) {
     const t = Object.assign({ crs: 'EPSG:3857', origin: [-MERC, MERC], res0: 2 * MERC / 256, size: 256, maxZ: 18, extent: [-MERC, -MERC, MERC, MERC] }, spec.tiles || {});
     await ensureCrs(t.crs);
     src.kind = 'tiles';
@@ -1447,6 +1462,62 @@ function zarrRaster(Z, L, cap) {
   };
 }
 
+
+// ------------------------------------------------------------------ scheme only
+// A grid with no data: CRS, extent, shape (or resolution) and block size.
+// Overviews halve until the whole grid fits in one block, as a COG's would.
+// Blocks are drawn as a checkerboard whose colour names the level, so all
+// that shows is the scheme: which level and which blocks each policy reads.
+// grid:crs=EPSG:3031&extent=xmin,ymin,xmax,ymax&shape=ncol,nrow&block=256
+// (res=dx[,dy] instead of shape).
+const LEVEL_HUES = [[66, 133, 244], [234, 67, 53], [52, 168, 83], [251, 188, 5], [154, 70, 196], [0, 172, 193], [255, 112, 67], [124, 179, 66], [236, 64, 122], [92, 107, 192], [141, 110, 99], [38, 166, 154]];
+function parseGridSpec(url) {
+  const q = new URLSearchParams(url.replace(/^grid:/, ''));
+  const crs = (q.get('crs') || 'EPSG:4326').trim();
+  const ext = (q.get('extent') || '').split(',').map(Number);
+  if (ext.length !== 4 || ext.some((v) => !isFinite(v)) || !(ext[2] > ext[0] && ext[3] > ext[1])) throw new Error('grid: extent=xmin,ymin,xmax,ymax is required');
+  let w, h;
+  if (q.get('shape')) [w, h] = q.get('shape').split(',').map((v) => Math.round(+v));
+  else if (q.get('res')) {
+    const r = q.get('res').split(',').map(Number);
+    w = Math.round((ext[2] - ext[0]) / r[0]); h = Math.round((ext[3] - ext[1]) / (r[1] || r[0]));
+  }
+  if (!(w > 0 && h > 0)) throw new Error('grid: give shape=ncol,nrow or res=dx[,dy]');
+  const bs = (q.get('block') || '256').split(',').map((v) => Math.round(+v));
+  return { crs, extent: ext, w, h, bw: bs[0], bh: bs[1] || bs[0] };
+}
+function gridCog(g) {
+  const levels = [];
+  let w = g.w, h = g.h, k = 0;
+  for (;;) {
+    const rx = (g.extent[2] - g.extent[0]) / w, ry = (g.extent[3] - g.extent[1]) / h;
+    const L = { w, h, gt: [g.extent[0], rx, g.extent[3], ry], res: Math.max(rx, ry), tw: g.bw, th: g.bh, k };
+    const hue = LEVEL_HUES[k % LEVEL_HUES.length];
+    L.im = {
+      readRasters({ window }) {
+        const [c0, r0, c1, r1] = window;
+        const ww = c1 - c0, hh = r1 - r0;
+        const out = new Uint8Array(ww * hh * 3);
+        for (let r = 0; r < hh; r++) {
+          const by = Math.floor((r0 + r) / g.bh);
+          for (let c = 0; c < ww; c++) {
+            const bx = Math.floor((c0 + c) / g.bw);
+            const f = (bx + by) % 2 ? 1 : 0.62;
+            const q = (r * ww + c) * 3;
+            out[q] = hue[0] * f; out[q + 1] = hue[1] * f; out[q + 2] = hue[2] * f;
+          }
+        }
+        return Promise.resolve(out);
+      }
+    };
+    levels.push(L);
+    if (w <= g.bw && h <= g.bh) break;
+    w = Math.max(1, Math.ceil(w / 2)); h = Math.max(1, Math.ceil(h / 2)); k++;
+    if (k > 30) break;
+  }
+  return { url: 'grid', levels, spp: 3, rgba: true, nodata: null, extent: g.extent, res: levels[0].res };
+}
+
 // ------------------------------------------------------------------ one screen tile
 async function buildTile(panel, z, x, y) {
   const t0 = performance.now();
@@ -1464,7 +1535,7 @@ async function buildTile(panel, z, x, y) {
 
   let levels, mode;
   if (SRC.kind === 'tiles') { levels = SRC.levels; mode = 'tiles'; }
-  else if (SRC.kind === 'cog') { levels = null; mode = 'cog'; }
+  else if (SRC.kind === 'cog' || SRC.kind === 'grid') { levels = null; mode = 'cog'; }
   else if (SRC.kind === 'zarr') { levels = null; mode = 'zarr'; }
   else { levels = pol.mosaic === 'recipe' ? await vrtLevels(panel) : [SRC.root]; mode = 'vrt'; }
 
@@ -1501,7 +1572,7 @@ async function buildTile(panel, z, x, y) {
     }
     if (k >= Z.levels.length) { info.level = 'no level coarse enough'; info.tooBig = true; }
   } else if (mode === 'cog') {
-    const cog = await panelCog(panel, SRC.url);
+    const cog = SRC.kind === 'grid' ? SRC.cog : await panelCog(panel, SRC.url);
     let k = pickLevel(cog.levels, limit);
     for (; k < cog.levels.length; k++) {
       const L = cog.levels[k];
@@ -2229,6 +2300,12 @@ function updateRecipe() {
   const srs = DISP.native ? SRC.crs : DISP.crs;
   let dsn = SRC.dsn;
   let pre = '';
+  if (SRC.kind === 'grid') {
+    const g = SRC.grid, e0 = g.extent;
+    pre = '# the scheme itself, as an empty tiled GeoTIFF\ngdal_create -of GTiff -outsize ' + g.w + ' ' + g.h + ' -a_srs "' + g.crs + '" \\\n  -a_ullr ' + [e0[0], e0[3], e0[2], e0[1]].join(' ') +
+      ' -co TILED=YES -co BLOCKXSIZE=' + g.bw + ' -co BLOCKYSIZE=' + g.bh + ' -co SPARSE_OK=YES grid.tif\n\n';
+    dsn = 'grid.tif';
+  }
   if (SRC.kind === 'tiles' && !/\$\{z\}/.test(dsn)) pre = '# a WMTS layer: open it through GDAL as WMTS:<GetCapabilities URL>,layer=...\n';
   const txt = pre + 'gdalwarp -t_srs "' + (/^VRT:/.test(srs) ? SRC.dsn : DISP.custom ? projString(srs) : srs) + '" \\\n  -te ' + e.map(f).join(' ') + ' \\\n  -ts ' + W + ' 0 -r bilinear \\\n  "' + dsn + '" view.tif';
   $('recipe').textContent = txt;

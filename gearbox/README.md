@@ -14,6 +14,14 @@ source in the browser, with no server in between:
   multiscales (`multiscales.layout` with `spatial:transform`,
   `spatial:shape` and `proj:code`) or a CF-style variable with regular 1D
   coordinates. Blocks are chunks.
+- **scheme only**: no data at all, just a grid,
+  `grid:crs=EPSG:3031&extent=xmin,ymin,xmax,ymax&shape=ncol,nrow&block=256`
+  (or `res=dx[,dy]` for `shape`; `crs` can be a PROJ string). Overviews
+  halve until the grid fits one block, as a COG's would. Blocks draw as a
+  checkerboard coloured by level, so the page shows only the scheme: which
+  level and which blocks each policy would read. The recipe tab gives the
+  `gdal_create` command for the same empty tiled GeoTIFF. Presets: the REMA
+  2 m grid, the GEBCO 15 arc-second grid and a Sentinel-2 tile.
 - **virtual Zarr**: kerchunk references in Parquet (a `.zmetadata` with
   `record_size`, then `<var>/refs.<n>.parq`). The store is metadata only;
   each chunk is a byte range of an original netCDF/HDF5 file, read with
@@ -44,7 +52,7 @@ python3 -m http.server 8000
 Query parameters:
 
 - `src`: a preset id (`rema`, `rema32`, `gebco`, `eox`, `nasa3031`, `s2`,
-  `mur`, `ecmwf`, `bran`, `dep`, `dep4326`, `osm`, `esri`, `gibs3031`, `gibs3413`) or a URL. A URL
+  `mur`, `ecmwf`, `bran`, `dep`, `grid-rema`, `grid-gebco`, `grid-s2`, `dep4326`, `osm`, `esri`, `gibs3031`, `gibs3413`) or a URL. A URL
   containing `{z}` is a tile template, one ending `.vrt` is a VRT, one with
   `.zarr` or a `#var=` fragment is Zarr, anything else is a COG. A tile
   template can carry its zoom range: `.../{z}/{x}/{y}.png#maxz=12`. A Zarr
