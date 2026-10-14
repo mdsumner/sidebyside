@@ -1,0 +1,60 @@
+name: seaice
+
+# Mirror the latest NSIDC Sea Ice Index daily concentration GeoTIFFs (both
+# hemispheres) next to Gearbox, so the page can read them from its own
+# origin. The NSIDC file server does not let a page on another origin read
+# them. Small files (about 100 KB each); only the latest day is kept.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: seaice
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the latest file for each hemisphere
+        run: |
+          set -u
+          out=gearbox/data/seaice
+          mkdir -p "$out"
+          base=https://noaadata.apps.nsidc.org/NOAA/G02135
+          json="{"
+          for hemi in south north; do
+            H=$([ "$hemi" = south ] && echo S || echo N)
+            found=""
+            for back in $(seq 1 30); do
+              d=$(date -u -d "-$back day" +%Y%m%d)
+              y=${d:0:4}; m=${d:4:2}; mon=$(date -u -d "-$back day" +%b)
+              url="$base/$hemi/daily/geotiff/$y/${m}_${mon}/${H}_${d}_concentration_v4.0.tif"
+              if curl -sfL --retry 2 -o "$out/${H}_latest.tif.new" "$url"; then
+                mv "$out/${H}_latest.tif.new" "$out/${H}_latest.tif"
+                found="${d:0:4}-${d:4:2}-${d:6:2}"
+                echo "$hemi: $url"
+                break
+              fi
+            done
+            rm -f "$out/${H}_latest.tif.new"
+            [ -n "$found" ] || { echo "no $hemi file in 30 days"; continue; }
+            [ "$json" = "{" ] || json="$json,"
+            json="$json\"$H\":{\"date\":\"$found\",\"file\":\"${H}_latest.tif\",\"source\":\"$url\"}"
+          done
+          echo "$json}" > "$out/latest.json"
+          cat "$out/latest.json"
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gearbox/data/seaice
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git commit -m "seaice: latest NSIDC daily concentration"
+          git push

@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # pushes made by the seaice mirror use GITHUB_TOKEN and do not trigger
+  # push workflows, so redeploy when it finishes
+  workflow_run:
+    workflows: [seaice]
+    types: [completed]
 
 permissions:
   contents: read

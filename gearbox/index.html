@@ -1913,11 +1913,47 @@ async function loadIceHemisphere(tpl, hemi) {
   }
   throw new Error('sea ice: no ' + hemi + ' file from ' + host + ' in the last 21 days (' + missing + ' not found, ' + blocked + ' refused by the browser)');
 }
+// The repo mirrors the latest files daily (data/seaice/latest.json), since
+// the NSIDC server does not allow cross-origin reads; without a mirror the
+// page tries NSIDC directly.
+async function loadIceMirror() {
+  const r = await ledgerFetch(setupLedger, null, new URL('data/seaice/latest.json', location.href).href);
+  if (!r.ok) throw new Error('no mirror');
+  const m = JSON.parse(new TextDecoder().decode(r.buf));
+  return ['S', 'N'].filter((H) => m[H]).map((H) => ({ H, date: m[H].date, url: new URL('data/seaice/' + m[H].file, location.href).href }));
+}
+async function loadIceFile(url, hemi, dateStr) {
+  const crs = hemi === 'north' ? 'EPSG:3411' : 'EPSG:3412';
+  const tif = await GT.fromCustomClient(new LedgerClient(url, setupLedger, null), { allowFullFile: true, blockSize: 65536 });
+  const im = await tif.getImage();
+  const w = im.getWidth(), h = im.getHeight();
+  const [ox, oy] = im.getOrigin(), [rx, ry] = im.getResolution();
+  const ras = await im.readRasters({ samples: [0], interleave: true });
+  const mask = new Uint8Array(w * h);
+  for (let p = 0; p < w * h; p++) mask[p] = ras[p] >= 150 ? 1 : 0;
+  const segs = contourMask(mask, w, h);
+  const t = tf(crs, 'EPSG:4326');
+  const ll = new Float64Array(segs.length);
+  for (let k = 0; k < segs.length; k += 2) {
+    const q = fwd(t, ox + segs[k] * rx, oy + segs[k + 1] * ry);
+    ll[k] = q ? q[0] : NaN; ll[k + 1] = q ? q[1] : NaN;
+  }
+  return { date: dateStr, segs: ll, url };
+}
 function loadIce() {
   if (!OVERLAY.iceP) {
-    const tpl = new URLSearchParams(location.search).get('seaice') || SEAICE_TEMPLATE;
+    const custom = new URLSearchParams(location.search).get('seaice');
+    const tpl = custom || SEAICE_TEMPLATE;
     OVERLAY.iceP = (async () => {
-      const res = await Promise.allSettled([loadIceHemisphere(tpl, 'south'), loadIceHemisphere(tpl, 'north')]);
+      let jobs = null;
+      if (!custom) {
+        try {
+          const files = await loadIceMirror();
+          if (files.length) jobs = files.map((f) => loadIceFile(f.url, f.H === 'N' ? 'north' : 'south', f.date));
+        } catch (e) { /* no mirror: try NSIDC directly */ }
+      }
+      if (!jobs) jobs = [loadIceHemisphere(tpl, 'south'), loadIceHemisphere(tpl, 'north')];
+      const res = await Promise.allSettled(jobs);
       OVERLAY.ice = res.filter((r) => r.status === 'fulfilled').map((r) => r.value);
       for (const r of res) if (r.status === 'rejected') panels.forEach((P) => P.notes.add(String(r.reason && r.reason.message || r.reason)));
       if (OVERLAY.ice.length) $('iceLabel').textContent = 'sea ice edge ' + OVERLAY.ice.map((v) => v.date).filter((v, i, a) => a.indexOf(v) === i).join(' / ');

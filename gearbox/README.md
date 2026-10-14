@@ -122,7 +122,10 @@ policy, so changing it keeps the preset; it rides along in view links.
   polar stereographic grid. Land, coast and pole-hole codes count as ice, so
   only the edge against open ocean is drawn. The date shows beside the
   checkbox; if nothing loads, the HUD says whether the files were missing or
-  the browser was refused. `?seaice=` can point at another copy, with
+  the browser was refused. The NSIDC server does not allow cross-origin
+  reads, so a daily workflow (`.github/workflows/seaice.yml`) mirrors the
+  latest file for each hemisphere into `data/seaice/` with a `latest.json`,
+  and the page reads that first. `?seaice=` can point at another copy, with
   `{hemi}` `{H}` `{yyyy}` `{mm}` `{Mon}` `{dd}` in the template.
 
 Overlays are context: their bytes are not counted in either panel's ledger.
