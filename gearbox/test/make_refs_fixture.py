@@ -39,18 +39,18 @@ def write_refs(var, recs):
                         "raw": pa.array([r[3] for r in part], pa.binary())})
         pq.write_table(tbl, os.path.join(root, var, "refs.%d.parq" % (f // rs)))
 write_refs("ssh", [(target, o, n, None) for o, n in rows])
-write_refs("lat", [(None, 0, 0, lat.astype("<f8").tobytes())])
-write_refs("lon", [(None, 0, 0, lon.astype("<f8").tobytes())])
+write_refs("yt_ocean", [(None, 0, 0, lat.astype("<f8").tobytes())])
+write_refs("xt_ocean", [(None, 0, 0, lon.astype("<f8").tobytes())])
 meta = {
     ".zgroup": {"zarr_format": 2}, ".zattrs": {"title": "virtual fixture"},
     "ssh/.zarray": {"shape": list(ssh.shape), "chunks": list(chunks), "dtype": "<f4", "fill_value": 9.969209968386869e36,
                     "order": "C", "filters": [{"id": "shuffle", "elementsize": 4}, {"id": "zlib", "level": 1}],
                     "compressor": None, "dimension_separator": ".", "zarr_format": 2},
-    "ssh/.zattrs": {"_ARRAY_DIMENSIONS": ["time", "lat", "lon"], "nan_attr": float("nan"), "_FillValue": "AAAAgB2vFcQ=", "valid_range": [-1000.0, 1000.0]},
-    "lat/.zarray": {"shape": [300], "chunks": [300], "dtype": "<f8", "fill_value": None, "order": "C", "filters": None, "compressor": None, "zarr_format": 2},
-    "lat/.zattrs": {"_ARRAY_DIMENSIONS": ["lat"]},
-    "lon/.zarray": {"shape": [600], "chunks": [600], "dtype": "<f8", "fill_value": None, "order": "C", "filters": None, "compressor": None, "zarr_format": 2},
-    "lon/.zattrs": {"_ARRAY_DIMENSIONS": ["lon"]},
+    "ssh/.zattrs": {"_ARRAY_DIMENSIONS": ["Time", "yt_ocean", "xt_ocean"], "nan_attr": float("nan"), "_FillValue": "AAAAgB2vFcQ=", "valid_range": [-1000.0, 1000.0]},
+    "yt_ocean/.zarray": {"shape": [300], "chunks": [300], "dtype": "<f8", "fill_value": None, "order": "C", "filters": None, "compressor": None, "zarr_format": 2},
+    "yt_ocean/.zattrs": {"_ARRAY_DIMENSIONS": ["yt_ocean"]},
+    "xt_ocean/.zarray": {"shape": [600], "chunks": [600], "dtype": "<f8", "fill_value": None, "order": "C", "filters": None, "compressor": None, "zarr_format": 2},
+    "xt_ocean/.zattrs": {"_ARRAY_DIMENSIONS": ["xt_ocean"]},
 }
 json.dump({"metadata": meta, "record_size": rs}, open(os.path.join(root, ".zmetadata"), "w"))
 print("virtual zarr fixture in", root)

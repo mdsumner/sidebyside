@@ -1268,9 +1268,15 @@ const X_NAMES = ['x', 'lon', 'longitude', 'easting', 'nlon', 'rlon'];
 function dimsOf(arr) {
   return arr.dimensionNames || (arr.attrs && arr.attrs._ARRAY_DIMENSIONS) || null;
 }
+// Exact names first, then patterns (yt_ocean, xu_ocean, latitude_bnds...),
+// then the last two dimensions.
 function findYX(dims) {
   const low = dims.map((d) => String(d).toLowerCase());
-  return [low.findIndex((d) => Y_NAMES.includes(d)), low.findIndex((d) => X_NAMES.includes(d))];
+  let yi = low.findIndex((d) => Y_NAMES.includes(d)), xi = low.findIndex((d) => X_NAMES.includes(d));
+  if (yi < 0) yi = low.findIndex((d) => /lat/.test(d) || /^y/.test(d));
+  if (xi < 0) xi = low.findIndex((d) => /lon/.test(d) || /^x/.test(d));
+  if (yi < 0 || xi < 0 || yi === xi) { yi = dims.length - 2; xi = dims.length - 1; }
+  return [yi, xi];
 }
 function gtFromAffine(t) {
   // [a, b, c, d, e, f]: x = a*col + b*row + c, y = d*col + e*row + f
@@ -1333,7 +1339,7 @@ async function openZarr(url, ledger, limiter) {
     for (const c of cands) {
       const a = await z.open(root.resolve(c.path), { kind: 'array' });
       const d = dimsOf(a);
-      if (a.shape.length >= 2 && d && findYX(d).every((v) => v >= 0) && findYX(d).join() !== '-1,-1') return a;
+      if (a.shape.length >= 2 && d && !d.some((n) => /bnds|bounds/i.test(n))) return a;
       if (a.shape.length >= 2 && !d) return a;
     }
     throw new Error('no 2D variable found: add #var=NAME to the URL');
@@ -1363,8 +1369,7 @@ async function openZarr(url, ledger, limiter) {
     attrsList = [a.attrs, gattrs];
   }
   for (const L of levels) {
-    let [yi, xi] = findYX(L.dims);
-    if (yi < 0 || xi < 0) { yi = L.arr.shape.length - 2; xi = L.arr.shape.length - 1; }
+    const [yi, xi] = findYX(L.dims);
     L.yi = yi; L.xi = xi;
     L.h = L.arr.shape[yi]; L.w = L.arr.shape[xi];
     L.res = Math.max(Math.abs(L.gt[1]), Math.abs(L.gt[3]));
