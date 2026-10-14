@@ -7,6 +7,7 @@ ROUTES = {
     "proj4@2.12.1/dist/proj4.js": LIB + "/proj4-2.12.1/package/dist/proj4.js",
     "geotiff@2.1.3/dist-browser/geotiff.js": LIB + "/geotiff-2.1.3/package/dist-browser/geotiff.js",
     "fzstd@0.1.1/umd/index.js": LIB + "/fzstd/package/umd/index.js",
+    "zarrita@0.7.5/+esm": "/home/claude/work/zb/zarrita-bundle.mjs",
 }
 
 async def main(base, outdir, queries, dpr):
@@ -21,7 +22,7 @@ async def main(base, outdir, queries, dpr):
             u = r.request.url
             for k, v in ROUTES.items():
                 if k in u:
-                    return await r.fulfill(path=v, content_type="application/javascript")
+                    return await r.fulfill(path=v, content_type="application/javascript", headers={"Access-Control-Allow-Origin": "*"})
             if os.environ.get("PROXY") and u.startswith("http://127.0.0.1:8765/index.html"):
                 return await r.fulfill(path="/tmp/claude-0/site/index.html", content_type="text/html")
             if "fonts.g" in u:

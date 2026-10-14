@@ -312,6 +312,7 @@ for (let z = 48; z <= 58; z++) CRSDEFS['EPSG:283' + z] = '+proj=utm +zone=' + z 
 for (const k of Object.keys(CRSDEFS)) if (!proj4.defs(k)) proj4.defs(k, CRSDEFS[k]);
 async function ensureCrs(code) {
   if (!code) throw new Error('no CRS');
+  if (/^WKT:/.test(code) && proj4.defs(code)) return code;
   if (/^VRT:/.test(code) && proj4.defs(code)) return code;
   if (CRSDEFS[code]) { if (!proj4.defs(code)) proj4.defs(code, CRSDEFS[code]); return code; }
   if (proj4.defs(code)) return code;
@@ -373,6 +374,8 @@ const PRESETS = [
   { group: 'COGs', id: 'eox', label: 'EOxCloudless 2024 (global, EPSG:4326, RGB)', url: 'https://s3.us-east-1.amazonaws.com/ds-deck.gl-raster-public/cog/viewing-basic_s2cloudless-2024_geodetic-zoom-3_3bands_8bit.tif', display: 'EPSG:3857' },
   { group: 'COGs', id: 'nasa3031', label: 'NASA Explorer base map (EPSG:3031, RGB)', url: S3COOP + '/scar/distant/supporting/EO-basemap_ps_cog.tif', display: 'EPSG:3031' },
   { group: 'COGs', id: 's2', label: 'Sentinel-2 TCI 55GEN (UTM 55S, RGB)', url: 'https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/55/G/EN/2024/12/S2A_55GEN_20241204_0_L2A/TCI.tif', display: 'EPSG:3857' },
+  { group: 'Zarr', id: 'mur', label: 'GHRSST MUR SST 0.01 deg (Zarr v2, one level)', url: 'https://mur-sst.s3.us-west-2.amazonaws.com/zarr-v1#var=analysed_sst&sel=time:-1', display: 'EPSG:3857', fit: [143, -45, 150, -39], style: { palette: 'viridis', min: 281, max: 293 }, note: 'One big array with no pyramid: windowed reads work up close, and the page says no when zoomed out.' },
+  { group: 'Zarr', id: 'ecmwf', label: 'ECMWF IFS ENS 2 m temperature (Zarr v3, dynamical.org)', url: S3COOP + '/dynamical/ecmwf-ifs-ens-forecast-15-day-0-25-degree/v0.1.0.zarr#var=temperature_2m&sel=init_time:-1', display: 'EPSG:8857', style: { palette: 'viridis', min: -40, max: 40 } },
   { group: 'Tile servers', id: 'osm', label: 'OpenStreetMap (XYZ, EPSG:3857)', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', display: 'EPSG:3857', tiles: { crs: 'EPSG:3857', maxZ: 19 }, attribution: '(c) OpenStreetMap contributors' },
   { group: 'Tile servers', id: 'esri', label: 'Esri World Imagery (XYZ, EPSG:3857)', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', display: 'EPSG:3031', tiles: { crs: 'EPSG:3857', maxZ: 19 }, attribution: 'Esri, Maxar, Earthstar Geographics' },
   { group: 'Tile servers', id: 'gibs3031', label: 'NASA GIBS Blue Marble (WMTS, EPSG:3031)', url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3031/best/BlueMarble_ShadedRelief_Bathymetry/default/500m/{z}/{y}/{x}.jpeg', display: 'EPSG:3031', tiles: { crs: 'EPSG:3031', origin: [-4194304, 4194304], res0: 8192, size: 512, maxZ: 4, extent: [-4194304, -4194304, 4194304, 4194304] } },
@@ -486,7 +489,7 @@ async function ledgerFetch(ledger, limiter, url, init) {
       const r = await fetch(url, init);
       const buf = await r.arrayBuffer();
       ledger.bytes += buf.byteLength;
-      if (!r.ok) ledger.err++;
+      if (!r.ok && r.status !== 404 && r.status !== 403) ledger.err++;
       return { status: r.status, ok: r.ok, headers: r.headers, buf };
     } catch (e) {
       ledger.err++;
@@ -682,6 +685,17 @@ async function loadSource(spec) {
     }
     src.template = url;
     src.dsn = t.crs === 'EPSG:3857' && t.size === 256 ? url.replace('{z}', '${z}').replace('{x}', '${x}').replace('{y}', '${y}') : url;
+  } else if (/\.zarr(\/|#|$)|#zarr|[?&#]var=/i.test(url)) {
+    const Z = await openZarr(url, setupLedger, null);
+    await ensureCrs(Z.crs);
+    src.kind = 'zarr';
+    src.crs = Z.crs;
+    const e = zarrExtent(Z.levels[0]);
+    src.extent = e;
+    src.rgba = false;
+    src.res = Z.levels[0].res;
+    src.levels = Z.levels.map((L) => ({ name: fmtRes(L.res, isGeographic(Z.crs)), res: L.res }));
+    src.dsn = 'ZARR:"/vsicurl/' + Z.opts.base + '"' + (Z.levels.length === 1 && Z.levels[0].path && Z.levels[0].path !== '/' ? ':' + Z.levels[0].path : '');
   } else if (/\.vrt(\?|$)/i.test(url)) {
     const r = await ledgerFetch(setupLedger, null, url);
     if (!r.ok) throw new Error('HTTP ' + r.status + ' reading ' + url);
@@ -1088,6 +1102,233 @@ function serverTile(panel, z, x, y) {
   return p;
 }
 
+
+// ------------------------------------------------------------------ Zarr
+// A Zarr store is levels of grids too: GeoZarr multiscales give the levels
+// (spatial:transform and spatial:shape per layout item, proj:code for the
+// CRS); a plain CF-style variable is one level whose transform comes from
+// regular 1D coordinates. Blocks are chunks. zarrita does the decoding; the
+// store underneath is a panel's own, so its bytes land in that panel's
+// ledger. URL fragment: #var=NAME&sel=dim:index,dim:-1&crs=EPSG:xxxx
+// (a negative index counts from the end; other dimensions default to 0).
+const ZARRITA = 'https://cdn.jsdelivr.net/npm/zarrita@0.7.5/+esm';
+let zmod = null;
+function zarrita() {
+  if (!zmod) { zmod = import(ZARRITA); zmod.catch(() => { zmod = null; }); }
+  return zmod;
+}
+// Encoded chunks are cached per panel (up to 256 MB), and a request in
+// flight is shared, so screen tiles that fall in one chunk fetch it once.
+function zarrStore(base, ledger, limiter) {
+  const u = (key) => base + (key.startsWith('/') ? key : '/' + key);
+  const miss = (r) => r.status === 404 || r.status === 403;
+  const cache = new Map();
+  let bytes = 0;
+  const cached = (k, fn) => {
+    let p = cache.get(k);
+    if (p) { cache.delete(k); cache.set(k, p); return p; }
+    p = fn().then((v) => {
+      if (v) { bytes += v.byteLength; p.size = v.byteLength; }
+      while (bytes > 256e6 && cache.size > 1) {
+        const [k0, p0] = cache.entries().next().value;
+        cache.delete(k0); bytes -= p0.size || 0;
+      }
+      return v;
+    });
+    p.catch(() => cache.delete(k));
+    cache.set(k, p);
+    return p;
+  };
+  const go = async (key, init) => {
+    const r = await ledgerFetch(ledger, limiter, u(key), init);
+    if (miss(r)) return undefined;
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' for ' + key);
+    return new Uint8Array(r.buf);
+  };
+  return {
+    get(key) { return cached(key, () => go(key)); },
+    getRange(key, range) {
+      const h = range.suffixLength !== undefined ? 'bytes=-' + range.suffixLength : 'bytes=' + range.offset + '-' + (range.offset + range.length - 1);
+      return cached(key + '|' + h, () => go(key, { headers: { Range: h } }));
+    }
+  };
+}
+function parseZarrUrl(url) {
+  const i = url.indexOf('#');
+  const base = (i < 0 ? url : url.slice(0, i)).replace(/\/+$/, '');
+  const q = new URLSearchParams(i < 0 ? '' : url.slice(i + 1));
+  const sel = {};
+  for (const part of (q.get('sel') || '').split(',')) {
+    const m = /^([^:]+):(-?\d+)$/.exec(part.trim());
+    if (m) sel[m[1]] = +m[2];
+  }
+  return { base, variable: q.get('var'), sel, crs: q.get('crs') };
+}
+const Y_NAMES = ['y', 'lat', 'latitude', 'northing', 'nlat', 'rlat'];
+const X_NAMES = ['x', 'lon', 'longitude', 'easting', 'nlon', 'rlon'];
+function dimsOf(arr) {
+  return arr.dimensionNames || (arr.attrs && arr.attrs._ARRAY_DIMENSIONS) || null;
+}
+function findYX(dims) {
+  const low = dims.map((d) => String(d).toLowerCase());
+  return [low.findIndex((d) => Y_NAMES.includes(d)), low.findIndex((d) => X_NAMES.includes(d))];
+}
+function gtFromAffine(t) {
+  // [a, b, c, d, e, f]: x = a*col + b*row + c, y = d*col + e*row + f
+  if (Math.abs(t[1]) > 1e-12 || Math.abs(t[3]) > 1e-12) throw new Error('rotated spatial:transform is not supported');
+  return [t[2], t[0], t[5], -t[4]];
+}
+async function gtFromCoords(z, root, dims, yi, xi, arr) {
+  const read = async (name) => {
+    const a = await z.open(root.resolve(name), { kind: 'array' });
+    const r = await z.get(a);
+    return Array.from(r.data, Number);
+  };
+  const ys = await read(dims[yi]), xs = await read(dims[xi]);
+  if (ys.length < 2 || xs.length < 2) throw new Error('coordinates too short to define a grid');
+  const dx = (xs[xs.length - 1] - xs[0]) / (xs.length - 1), dy = (ys[ys.length - 1] - ys[0]) / (ys.length - 1);
+  const irregular = (v, d) => v.some((q, k) => Math.abs(q - (v[0] + k * d)) > Math.abs(d) * 0.01);
+  if (irregular(xs, dx) || irregular(ys, dy)) throw new Error('x/y coordinates are not regular; this reader needs a regular grid');
+  return [xs[0] - dx / 2, dx, ys[0] - dy / 2, -dy];
+}
+async function crsOf(z, root, opts, attrsList, dims) {
+  if (opts.crs) return opts.crs.toUpperCase();
+  for (const a of attrsList) {
+    if (!a) continue;
+    if (a['proj:code']) return a['proj:code'];
+    const wkt = a['proj:wkt2'] || a.crs_wkt || a.spatial_ref;
+    if (wkt) return wktCrs(wkt);
+    if (a.grid_mapping) {
+      try {
+        const gm = await z.open(root.resolve(a.grid_mapping), { kind: 'array' });
+        const w = gm.attrs.crs_wkt || gm.attrs.spatial_ref;
+        if (w) return wktCrs(w);
+      } catch (e) { /* fall through */ }
+    }
+  }
+  const low = dims.map((d) => String(d).toLowerCase());
+  if (low.some((d) => /lat/.test(d)) && low.some((d) => /lon/.test(d))) return 'EPSG:4326';
+  throw new Error('no CRS found: add #crs=EPSG:xxxx to the URL');
+}
+function wktCrs(wkt) {
+  const code = crsFromWkt(wkt);
+  if (code) return code;
+  const key = 'WKT:' + wkt.slice(0, 64) + ':' + wkt.length;
+  proj4.defs(key, wkt);
+  const d = proj4.defs(key);
+  CRSDEFS[key] = d && d.projName === 'longlat' ? '+proj=longlat' : key;
+  return key;
+}
+// Open the store and describe it as levels, fine to coarse.
+async function openZarr(url, ledger, limiter) {
+  const z = await zarrita();
+  const opts = parseZarrUrl(url);
+  const store = await z.withMaybeConsolidatedMetadata(zarrStore(opts.base, ledger, limiter));
+  const root = z.root(store);
+  const node = await z.open(root);
+  const listing = store.contents ? store.contents() : [];
+  const pickVar = async (loc, prefix) => {
+    if (opts.variable) return z.open(loc.resolve(opts.variable), { kind: 'array' });
+    const cands = listing.filter((c) => c.kind === 'array' && c.path.startsWith(prefix) && c.path !== prefix);
+    for (const c of cands) {
+      const a = await z.open(root.resolve(c.path), { kind: 'array' });
+      const d = dimsOf(a);
+      if (a.shape.length >= 2 && d && findYX(d).every((v) => v >= 0) && findYX(d).join() !== '-1,-1') return a;
+      if (a.shape.length >= 2 && !d) return a;
+    }
+    throw new Error('no 2D variable found: add #var=NAME to the URL');
+  };
+  let levels = [], crs, attrsList;
+  const isArray = node instanceof z.Array;
+  const gattrs = isArray ? {} : node.attrs || {};
+  if (!isArray && gattrs.multiscales && gattrs.multiscales.layout) {
+    // GeoZarr multiscales
+    for (const item of gattrs.multiscales.layout) {
+      let a = await z.open(root.resolve(item.asset));
+      if (!(a instanceof z.Array)) a = await pickVar(root.resolve(item.asset), '/' + item.asset.replace(/^\//, ''));
+      const t = item['spatial:transform'] || gattrs['spatial:transform'];
+      if (!t) throw new Error('spatial:transform missing for level ' + item.asset);
+      const dims = dimsOf(a) || gattrs['spatial:dimensions'];
+      levels.push({ arr: a, dims, path: item.asset, gt: gtFromAffine(t) });
+    }
+    attrsList = [gattrs, levels[0].arr.attrs];
+  } else {
+    const a = isArray ? node : await pickVar(root, '/');
+    const dims = dimsOf(a);
+    if (!dims) throw new Error('the array has no dimension names');
+    const t = (a.attrs && a.attrs['spatial:transform']) || gattrs['spatial:transform'];
+    const [yi, xi] = findYX(dims);
+    const gt = t ? gtFromAffine(t) : await gtFromCoords(z, root, dims, yi, xi, a);
+    levels.push({ arr: a, dims, path: a.path, gt });
+    attrsList = [a.attrs, gattrs];
+  }
+  for (const L of levels) {
+    let [yi, xi] = findYX(L.dims);
+    if (yi < 0 || xi < 0) { yi = L.arr.shape.length - 2; xi = L.arr.shape.length - 1; }
+    L.yi = yi; L.xi = xi;
+    L.h = L.arr.shape[yi]; L.w = L.arr.shape[xi];
+    L.res = Math.max(Math.abs(L.gt[1]), Math.abs(L.gt[3]));
+  }
+  levels.sort((p, q) => p.res - q.res);
+  crs = await crsOf(z, root, opts, attrsList, levels[0].dims);
+  const A = levels[0].arr.attrs || {};
+  const fill = [A._FillValue, A.missing_value, levels[0].arr.fillValue].filter((v) => v !== undefined && v !== null);
+  return {
+    z, levels, crs, opts,
+    scale: A.scale_factor !== undefined ? +A.scale_factor : 1,
+    offset: A.add_offset !== undefined ? +A.add_offset : 0,
+    fill: fill.map(Number)
+  };
+}
+function zarrExtent(L) {
+  const [ox, rx, oy, ry] = L.gt;
+  const xa = ox, xb = ox + rx * L.w, ya = oy, yb = oy - ry * L.h;
+  return [Math.min(xa, xb), Math.min(ya, yb), Math.max(xa, xb), Math.max(ya, yb)];
+}
+function panelZarr(panel) {
+  if (!panel.zarr) {
+    panel.zarr = openZarr(SRC.url, panel.ledger, panel.limiter);
+    panel.zarr.catch(() => { panel.zarr = null; });
+  }
+  return panel.zarr;
+}
+const MAX_CHUNKS_PER_READ = 64;
+function zarrRaster(Z, L) {
+  const ch = L.arr.chunks;
+  const elems = ch.reduce((a, b) => a * b, 1) / ch[L.yi] / ch[L.xi];
+  return {
+    gt: L.gt, w: L.w, h: L.h, nodata: null,
+    async read(c0, r0, c1, r1) {
+      const z = Z.z;
+      const ny = Math.floor((r1 - 1) / ch[L.yi]) - Math.floor(r0 / ch[L.yi]) + 1;
+      const nx = Math.floor((c1 - 1) / ch[L.xi]) - Math.floor(c0 / ch[L.xi]) + 1;
+      // whole chunks are the only unit: cap by chunk count and decoded size
+      if (ny * nx > MAX_CHUNKS_PER_READ || ny * nx * ch[L.yi] * ch[L.xi] * elems > 4e8) {
+        throw Object.assign(new Error(ny * nx + ' chunks'), { tooLarge: true });
+      }
+      const sel = L.dims.map((d, i) => {
+        if (i === L.yi) return z.slice(r0, r1);
+        if (i === L.xi) return z.slice(c0, c1);
+        let k = Z.opts.sel[d] !== undefined ? Z.opts.sel[d] : 0;
+        if (k < 0) k += L.arr.shape[i];
+        return clamp(k, 0, L.arr.shape[i] - 1);
+      });
+      const res = await z.get(L.arr, sel);
+      const hh = r1 - r0, ww = c1 - c0;
+      const out = new Float32Array(hh * ww);
+      const [s0, s1] = res.stride;
+      const yFirst = L.yi < L.xi;
+      const data = res.data, fill = Z.fill, sc = Z.scale, of = Z.offset;
+      for (let r = 0; r < hh; r++) for (let c = 0; c < ww; c++) {
+        let v = Number(data[yFirst ? r * s0 + c * s1 : c * s0 + r * s1]);
+        if (v !== v || fill.includes(v)) { out[r * ww + c] = NaN; continue; }
+        out[r * ww + c] = v * sc + of;
+      }
+      return { data: out, nb: 1, blocks: ny * nx };
+    }
+  };
+}
+
 // ------------------------------------------------------------------ one screen tile
 async function buildTile(panel, z, x, y) {
   const t0 = performance.now();
@@ -1106,6 +1347,7 @@ async function buildTile(panel, z, x, y) {
   let levels, mode;
   if (SRC.kind === 'tiles') { levels = SRC.levels; mode = 'tiles'; }
   else if (SRC.kind === 'cog') { levels = null; mode = 'cog'; }
+  else if (SRC.kind === 'zarr') { levels = null; mode = 'zarr'; }
   else { levels = pol.mosaic === 'recipe' ? await vrtLevels(panel) : [SRC.root]; mode = 'vrt'; }
 
   // the cell's interpolation error, in source pixels or in output pixels
@@ -1125,6 +1367,21 @@ async function buildTile(panel, z, x, y) {
         break;
       } catch (e) { if (!e.tooLarge) throw e; }
     }
+  } else if (mode === 'zarr') {
+    const Z = await panelZarr(panel);
+    let k = pickLevel(Z.levels, limit);
+    for (; k < Z.levels.length; k++) {
+      const L = Z.levels[k];
+      const C = fill(meshUnit(L.res));
+      info.exactCells = C.exactCells;
+      try {
+        const s = await sampleRaster(panel, zarrRaster(Z, L), C, M, out, { bilinear: L.res > M.R * 1.01 });
+        info.level = fmtRes(L.res, SRC.geo) + (Z.levels.length > 1 ? ' (level ' + L.path + ')' : '');
+        info.blocks = s.blocks; info.files = s.n ? 1 : 0;
+        break;
+      } catch (e) { if (!e.tooLarge) throw e; }
+    }
+    if (k >= Z.levels.length) { info.level = 'no level coarse enough'; info.tooBig = true; }
   } else if (mode === 'cog') {
     const cog = await panelCog(panel, SRC.url);
     let k = pickLevel(cog.levels, limit);
@@ -1139,6 +1396,7 @@ async function buildTile(panel, z, x, y) {
         break;
       } catch (e) { if (!e.tooLarge) throw e; }
     }
+    if (k >= cog.levels.length) { info.level = 'no level coarse enough'; info.tooBig = true; }
   } else {
     const k = pickLevel(levels, limit);
     const L = levels[k];
@@ -1263,7 +1521,7 @@ function resetPanel(P, keepLedger) {
   P.gen = (P.gen || 0) + 1;
   P.active = 0;
   if (!keepLedger) {
-    P.cogs.clear(); P.serverTiles.clear();
+    P.cogs.clear(); P.serverTiles.clear(); P.zarr = null;
     P.ledger = makeLedger();
   }
   P.fileCap = 12;
@@ -1489,12 +1747,16 @@ function drawOverlays(P, ctx, W, H, sx, sy, span, z) {
       if (dw < 90 || e.info.empty) continue;
       const lines = [e.info.level];
       if (e.info.refused) lines.push('needs ' + e.info.refused + ' files');
-      else lines.push(e.info.files + ' file' + (e.info.files === 1 ? '' : 's') + ', ' + e.info.blocks + ' block' + (e.info.blocks === 1 ? '' : 's'));
+      else {
+        const unit = SRC.kind === 'zarr' ? 'chunk' : SRC.kind === 'tiles' ? 'tile' : 'block';
+        lines.push(SRC.kind === 'tiles' ? e.info.blocks + ' ' + unit + (e.info.blocks === 1 ? '' : 's')
+          : e.info.files + ' file' + (e.info.files === 1 ? '' : 's') + ', ' + e.info.blocks + ' ' + unit + (e.info.blocks === 1 ? '' : 's'));
+      }
       if (e.info.exactCells) lines.push(e.info.exactCells + '/256 cells exact');
       ctx.save();
       ctx.beginPath(); ctx.rect(dx, dy, dw, dw); ctx.clip();
       const bw = Math.min(dw - 6, Math.max(...lines.map((l) => ctx.measureText(l).width)) + 8);
-      ctx.fillStyle = e.info.refused ? cssVar('--bad') : accent;
+      ctx.fillStyle = e.info.refused || e.info.tooBig ? cssVar('--bad') : accent;
       ctx.globalAlpha = 0.86;
       ctx.fillRect(dx + 3, dy + 3, bw, lines.length * 13 + 4);
       ctx.globalAlpha = 1;
@@ -1539,6 +1801,11 @@ function updateHuds() {
       html += '<div class="note bad">Per-file pyramids: ' + refused + ' screen tile' + (refused === 1 ? '' : 's') +
         ' would each open more than ' + P.fileCap + ' files. This view touches about ' + n + ' files, and every one costs a header read before any pixel. MosaicLayer apps set a minZoom here.</div>' +
         '<button class="btn" data-open="' + P.k + '">Open all ' + n + ' files anyway</button>';
+    }
+    const tooBig = P.visible ? P.visible.filter((e) => e.info && e.info.tooBig).length : 0;
+    if (tooBig) {
+      html += '<div class="note bad">' + tooBig + ' screen tile' + (tooBig === 1 ? '' : 's') + ' need more than the finest level can give at this scale: more than ' +
+        MAX_CHUNKS_PER_READ + ' chunks, or a window too large to read. The store has no level coarse enough. Zoom in, or publish a pyramid.</div>';
     }
     if (P.notes.size) html += '<div class="note">' + Array.from(P.notes).slice(-2).map(esc).join('<br>') + '</div>';
     if (P.hud._last !== html) { P.hud.innerHTML = html; P.hud._last = html; }
@@ -1720,8 +1987,9 @@ function customDisplay(crs) {
   return { crs, label: crs, origin: [x0, y1], res0: Math.max(w, h) / TS, extent: [x0, y0, x1, y1], custom: true };
 }
 function fitSource() {
-  const t = tf(SRC.crs, DISP.crs);
-  const [a, b, c, d] = SRC.extent;
+  const fitLL = SRC.spec && SRC.spec.fit;
+  const t = fitLL ? tf('EPSG:4326', DISP.crs) : tf(SRC.crs, DISP.crs);
+  const [a, b, c, d] = fitLL || SRC.extent;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   const pts = densify([[a, b], [c, b], [c, d], [a, d], [a, b]], t, 32);
   for (const p of pts) {
@@ -1731,7 +1999,7 @@ function fitSource() {
   }
   const ex = DISP.extent;
   // a global source fits the whole drawable display
-  if (SRC.global) { x0 = ex[0]; x1 = ex[2]; y0 = ex[1]; y1 = ex[3]; }
+  if (SRC.global && !fitLL) { x0 = ex[0]; x1 = ex[2]; y0 = ex[1]; y1 = ex[3]; }
   x0 = Math.max(x0, ex[0]); x1 = Math.min(x1, ex[2]); y0 = Math.max(y0, ex[1]); y1 = Math.min(y1, ex[3]);
   if (!(x1 > x0 && y1 > y0)) { x0 = ex[0]; x1 = ex[2]; y0 = ex[1]; y1 = ex[3]; }
   const [W, H] = panelSize(panels[0]);

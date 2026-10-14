@@ -17,9 +17,12 @@ class H(SimpleHTTPRequestHandler):
         path = self.translate_path(self.path)
         if not rng or not os.path.isfile(path):
             return super().do_GET()
-        m = re.match(r"bytes=(\d+)-(\d*)", rng)
         size = os.path.getsize(path)
-        a = int(m.group(1)); b = int(m.group(2)) if m.group(2) else size - 1
+        m = re.match(r"bytes=(\d*)-(\d*)", rng)
+        if m.group(1) == "":  # suffix range: the last N bytes
+            a = max(0, size - int(m.group(2))); b = size - 1
+        else:
+            a = int(m.group(1)); b = int(m.group(2)) if m.group(2) else size - 1
         b = min(b, size - 1)
         if a >= size:
             self.send_response(416); self.send_header("Content-Range", "bytes */%d" % size); self.end_headers(); return

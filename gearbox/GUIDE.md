@@ -238,6 +238,16 @@ layers use the same planner as a COG.
 `RasterTileLayer` in a custom projection once v10 lands. It is the cheapest
 proof that the tile-matrix path generalises.
 
+Zarr fits the same planner. Gearbox reads GeoZarr multiscales from the
+same group attributes deck.gl-raster's `geozarr` package parses
+(`multiscales.layout`, `spatial:transform`, `spatial:shape`, `proj:code`),
+and a CF-style variable with regular 1D coordinates as a single level. Its
+blocks are chunks, and the chunk shape decides what a view costs. A store
+with no multiscales, such as the 0.01 degree MUR SST array, reads well up
+close and has no answer zoomed out; the page says so rather than reading
+gigabytes. That is section 3's argument again: a pyramid is a data product,
+and a reader should make its absence visible.
+
 ## 8. Count the bytes
 
 Every number in this guide comes from Gearbox's per-panel ledger: a

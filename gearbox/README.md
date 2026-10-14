@@ -10,6 +10,10 @@ source in the browser, with no server in between:
 - **COGs**: any Cloud-Optimized GeoTIFF with an EPSG code and CORS;
 - **VRT mosaics**: GDAL VRT files that list COGs by URL, including
   `<Overview>` entries that add a whole-mosaic pyramid by reference.
+- **Zarr**: v2 or v3 stores (sharded or not) through zarrita, either GeoZarr
+  multiscales (`multiscales.layout` with `spatial:transform`,
+  `spatial:shape` and `proj:code`) or a CF-style variable with regular 1D
+  coordinates. Blocks are chunks.
 
 It draws the same view twice, side by side. Both panels run the same code.
 They differ only in policy: the left panel uses deck.gl-raster's defaults,
@@ -33,9 +37,12 @@ python3 -m http.server 8000
 Query parameters:
 
 - `src`: a preset id (`rema`, `rema32`, `gebco`, `eox`, `nasa3031`, `s2`,
-  `osm`, `esri`, `gibs3031`, `gibs3413`) or a URL. A URL containing `{z}` is
-  a tile template, one ending `.vrt` is a VRT, anything else is a COG. A tile
-  template can carry its zoom range: `.../{z}/{x}/{y}.png#maxz=12`.
+  `mur`, `ecmwf`, `osm`, `esri`, `gibs3031`, `gibs3413`) or a URL. A URL
+  containing `{z}` is a tile template, one ending `.vrt` is a VRT, one with
+  `.zarr` or a `#var=` fragment is Zarr, anything else is a COG. A tile
+  template can carry its zoom range: `.../{z}/{x}/{y}.png#maxz=12`. A Zarr
+  URL can carry `#var=NAME&sel=dim:index,dim:-1&crs=EPSG:xxxx` (a negative
+  index counts from the end; unlisted dimensions are read at 0).
 - `display`: `EPSG:3857`, `EPSG:4326`, `EPSG:3031`, `EPSG:3413`,
   `EPSG:8857`, `source`, any other EPSG code, or a PROJ string such as
   `+proj=laea +lat_0=-90 +lon_0=140 +datum=WGS84` (URL-encoded). The display
@@ -110,7 +117,10 @@ python3 test/drive.py http://127.0.0.1:8765/index.html /tmp/shots \
 ```
 
 `drive.py` routes the CDN scripts to local npm copies; edit `LIB` at its
-top.
+top. For the Zarr fixtures (`test/make_zarr_fixtures.py`: a GeoZarr
+multiscale group, a packed CF v2 store, a sharded v3 store) it also routes
+zarrita's `+esm` URL to a local single-file bundle, made with
+`npx esbuild entry.js --bundle --format=esm` over `export * from "zarrita"`.
 
 ## Limits
 
@@ -128,5 +138,10 @@ top.
   that proj4js parses.
 - Rendering is on the CPU into canvas tiles. That keeps the planner and the
   sampler in plain sight; it is not the fast path.
+
+- A Zarr read fetches whole chunks, so chunk shape decides what a view
+  costs. Reads are capped at 64 chunks per screen tile; past that the page
+  says the store has no level coarse enough. Encoded chunks are cached per
+  panel (256 MB); decoded chunks are not.
 
 See `GUIDE.md` for what this suggests for deck.gl-raster.
