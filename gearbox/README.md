@@ -134,6 +134,12 @@ policy, so changing it keeps the preset; it rides along in view links.
   answered, how many files and blocks it read, and how many lattice cells
   needed exact transforms.
 - **file footprints**: the VRT's source files, in the display CRS.
+- **background** (none by default): a second source drawn under the main
+  one in both panels: Esri imagery, OpenStreetMap, GIBS Blue Marble (3031 or
+  3413), EOxCloudless, the NASA 3031 base map or GEBCO. It runs through the
+  same pipeline with its own cache, always with the recipe reader's rules,
+  and its bytes are not counted in either panel's ledger. Links carry it
+  (`bg=`).
 - **coastline**: Natural Earth 1:50m (public domain), kept in `data/`,
   projected into the display CRS.
 - **sea ice edge**: the latest daily concentration from the NSIDC Sea Ice

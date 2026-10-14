@@ -188,6 +188,7 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
     <label><input type="checkbox" id="tFoot"> file footprints</label>
     <label><input type="checkbox" id="tGrat" checked> graticule</label>
     <label title="Keep the active display CRS when the source changes; untick to let each preset choose"><input type="checkbox" id="tKeepCrs" checked> keep display CRS</label>
+    <label title="A second source drawn under the main one in both panels; its bytes are not counted">background <select id="bgSel" aria-label="Background layer"></select></label>
     <label><input type="checkbox" id="tCoast" checked> coastline</label>
     <label title="NSIDC Sea Ice Index daily concentration, contoured at 15%, latest day available"><input type="checkbox" id="tIce"> <span id="iceLabel">sea ice edge</span></label>
   </div>
@@ -709,9 +710,9 @@ async function openCogWith(url, ledger, limiter) {
 let SRC = null;
 let srcSeq = 0;
 
-async function loadSource(spec) {
+async function loadSource(spec, bg) {
   let url = spec.url;
-  const seq = ++srcSeq;
+  const seq = bg ? -1 : ++srcSeq;
   // a tile URL may carry its zoom range: .../{z}/{x}/{y}.png#maxz=12
   const mz = /#maxz=(\d+)$/.exec(url);
   if (mz) { url = url.slice(0, mz.index); spec = Object.assign({}, spec, { url, tiles: Object.assign({}, spec.tiles || {}, { maxZ: +mz[1] }) }); }
@@ -802,27 +803,28 @@ async function loadSource(spec) {
   if (/^file:/.test(url)) src.dsn = url.slice(5).replace(/#\.vrt$/, '');
   src.geo = isGeographic(src.crs);
   src.global = src.geo && (src.extent[2] - src.extent[0]) > 359;
-  if (seq !== srcSeq) return null;
+  if (!bg && seq !== srcSeq) return null;
   return src;
 }
 
 // Overview levels of a VRT, resolved lazily per panel (only a policy that
 // uses them pays for reading them).
 async function vrtLevels(panel) {
+  const S = panel.src || SRC;
   if (panel.vrtLevels) return panel.vrtLevels;
   if (!panel.vrtLevelsP) {
     panel.vrtLevelsP = (async () => {
-      const out = [SRC.root];
-      await Promise.all(SRC.overviews.map(async (o) => {
+      const out = [S.root];
+      await Promise.all(S.overviews.map(async (o) => {
         try {
           if (o.kind === 'cog') {
             const cog = await panelCog(panel, o.url);
-            out.push({ kind: 'cog', url: o.url, res: cog.res, extent: cog.extent, name: fmtRes(cog.res, SRC.geo), role: 'overview' });
+            out.push({ kind: 'cog', url: o.url, res: cog.res, extent: cog.extent, name: fmtRes(cog.res, S.geo), role: 'overview' });
           } else {
             const r = await ledgerFetch(panel.ledger, panel.limiter, o.url);
             if (!r.ok) throw new Error('HTTP ' + r.status);
             const v = parseVrt(new TextDecoder().decode(r.buf), o.url);
-            out.push({ kind: 'mosaic', url: o.url, res: v.res, extent: v.extent, sources: v.sources, query: buildIndex(v.sources, v.extent), name: fmtRes(v.res, SRC.geo), role: 'overview' });
+            out.push({ kind: 'mosaic', url: o.url, res: v.res, extent: v.extent, sources: v.sources, query: buildIndex(v.sources, v.extent), name: fmtRes(v.res, S.geo), role: 'overview' });
           }
         } catch (e) {
           panel.notes.add('overview ' + o.name + ' unreadable: ' + (e.message || e));
@@ -869,12 +871,12 @@ function zForView() {
 // Map a screen tile into source coordinates. Returns per-pixel source coords
 // (as offsets from a reference point so float32 keeps sub-pixel precision)
 // plus the local size of a screen pixel in source units.
-function mapTile(z, x, y) {
+function mapTile(z, x, y, S) {
   const r = tileRes(z);
   const X0 = DISP.origin[0] + x * TS * r, Y0 = DISP.origin[1] - y * TS * r;
-  const same = DISP.crs === SRC.crs;
+  const same = DISP.crs === S.crs;
   const toLL = same ? null : tf(DISP.crs, 'EPSG:4326');
-  const fromLL = same ? null : tf('EPSG:4326', SRC.crs);
+  const fromLL = same ? null : tf('EPSG:4326', S.crs);
   const dispGeo = isGeographic(DISP.crs);
   // exact transform display -> source, with a round-trip guard on the inverse
   function exact(X, Y) {
@@ -889,7 +891,7 @@ function mapTile(z, x, y) {
       const back = fwd({ forward: toLL.inverse }, ll[0], ll[1]);
       if (back && (Math.abs(back[0] - X) > r * 0.01 + 1e-6 || Math.abs(back[1] - Y) > r * 0.01 + 1e-6)) return null;
     }
-    if (SRC.crs === 'EPSG:3857' && Math.abs(ll[1]) > 85.06) return null;
+    if (S.crs === 'EPSG:3857' && Math.abs(ll[1]) > 85.06) return null;
     const p = fwd(fromLL, ll[0], ll[1]);
     return p;
   }
@@ -912,7 +914,7 @@ function mapTile(z, x, y) {
     let bad = false;
     for (const q of c4) if (nx[q] !== nx[q]) bad = true;
     let wrap = false;
-    if (!bad && SRC.geo) {
+    if (!bad && S.geo) {
       let mn = Infinity, mx = -Infinity;
       for (const q of c4) { mn = Math.min(mn, nx[q]); mx = Math.max(mx, nx[q]); }
       wrap = mx - mn > 180;
@@ -1006,10 +1008,11 @@ function coordsBbox(C, M) {
 // tile. `A` optionally maps source coords into this raster's frame (used for
 // GDAL's assumption that an overview covers the base extent).
 async function sampleRaster(panel, ras, C, M, out, opts) {
+  const S = panel.src || SRC;
   const { sx, sy } = C;
   const [ox, rx, oy, ry] = ras.gt;
   const A = opts.affine;
-  const wrapW = SRC.global ? 360 : 0;
+  const wrapW = S.global ? 360 : 0;
   const n = sx.length;
   const U = new Float32Array(n), V = new Float32Array(n);
   let umin = Infinity, umax = -Infinity, vmin = Infinity, vmax = -Infinity, cnt = 0;
@@ -1143,10 +1146,11 @@ function tileRaster(panel, L) {
   };
 }
 function serverTile(panel, z, x, y) {
+  const S = panel.src || SRC;
   const key = z + '/' + x + '/' + y;
   let p = panel.serverTiles.get(key);
   if (p) return p;
-  const url = SRC.template.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+  const url = S.template.replace('{z}', z).replace('{x}', x).replace('{y}', y);
   p = (async () => {
     try {
       const r = await ledgerFetch(panel.ledger, panel.limiter, url);
@@ -1451,8 +1455,9 @@ function zarrExtent(L) {
   return [Math.min(xa, xb), Math.min(ya, yb), Math.max(xa, xb), Math.max(ya, yb)];
 }
 function panelZarr(panel) {
+  const S = panel.src || SRC;
   if (!panel.zarr) {
-    panel.zarr = openZarr(SRC.url, panel.ledger, panel.limiter);
+    panel.zarr = openZarr(S.url, panel.ledger, panel.limiter);
     panel.zarr.catch(() => { panel.zarr = null; });
   }
   return panel.zarr;
@@ -1551,24 +1556,25 @@ function gridCog(g) {
 
 // ------------------------------------------------------------------ one screen tile
 async function buildTile(panel, z, x, y) {
+  const S = panel.src || SRC;
   const t0 = performance.now();
   const pol = panel.policy;
   let calls = projCalls;
   const info = { level: '-', files: 0, blocks: 0, exactCells: 0, refused: 0, ms: 0, empty: false, calls: 0 };
-  const M = mapTile(z, x, y);
+  const M = mapTile(z, x, y, S);
   calls = projCalls - calls;
   const fill = (unitFor) => { const c0 = projCalls; const C = fillCoords(M, unitFor); calls += projCalls - c0; return C; };
-  const out = SRC.rgba ? { rgba: new Uint8ClampedArray(TS * TS * 4) } : { values: new Float32Array(TS * TS).fill(NaN) };
+  const out = S.rgba ? { rgba: new Uint8ClampedArray(TS * TS * 4) } : { values: new Float32Array(TS * TS).fill(NaN) };
   if (!M) { info.empty = true; info.calls = calls; return { info, out }; }
   // How big is a screen pixel, in the units the policy compares against?
   // Screen tiles are about one device pixel per tile pixel.
   const limit = M.R * (pol.lodBasis === 'css' ? DPR : 1) * pol.lodFactor;
 
   let levels, mode;
-  if (SRC.kind === 'tiles') { levels = SRC.levels; mode = 'tiles'; }
-  else if (SRC.kind === 'cog' || SRC.kind === 'grid') { levels = null; mode = 'cog'; }
-  else if (SRC.kind === 'zarr') { levels = null; mode = 'zarr'; }
-  else { levels = pol.mosaic === 'recipe' ? await vrtLevels(panel) : [SRC.root]; mode = 'vrt'; }
+  if (S.kind === 'tiles') { levels = S.levels; mode = 'tiles'; }
+  else if (S.kind === 'cog' || S.kind === 'grid') { levels = null; mode = 'cog'; }
+  else if (S.kind === 'zarr') { levels = null; mode = 'zarr'; }
+  else { levels = pol.mosaic === 'recipe' ? await vrtLevels(panel) : [S.root]; mode = 'vrt'; }
 
   // the cell's interpolation error, in source pixels or in output pixels
   const meshUnit = (levelRes) => (c) => pol.meshError === 'source' ? c.err / levelRes : c.errOut;
@@ -1582,7 +1588,7 @@ async function buildTile(panel, z, x, y) {
       info.exactCells = C.exactCells;
       try {
         const s = await sampleRaster(panel, tileRaster(panel, L), C, M, out, { bilinear: L.res > M.R * 1.01 });
-        info.level = L.name + ' (' + fmtRes(L.res, SRC.geo) + ')';
+        info.level = L.name + ' (' + fmtRes(L.res, S.geo) + ')';
         info.blocks = s.blocks; info.files = s.blocks;
         break;
       } catch (e) { if (!e.tooLarge) throw e; }
@@ -1596,14 +1602,14 @@ async function buildTile(panel, z, x, y) {
       info.exactCells = C.exactCells;
       try {
         const s = await sampleRaster(panel, zarrRaster(Z, L, panel.cap), C, M, out, { bilinear: L.res > M.R * 1.01 });
-        info.level = fmtRes(L.res, SRC.geo) + (Z.levels.length > 1 ? ' (level ' + L.path + ')' : '');
+        info.level = fmtRes(L.res, S.geo) + (Z.levels.length > 1 ? ' (level ' + L.path + ')' : '');
         info.blocks = s.blocks; info.files = s.n ? 1 : 0;
         break;
       } catch (e) { if (!e.tooLarge) throw e; }
     }
     if (k >= Z.levels.length) { info.level = 'no level coarse enough'; info.tooBig = true; }
   } else if (mode === 'cog') {
-    const cog = SRC.kind === 'grid' ? SRC.cog : await panelCog(panel, SRC.url);
+    const cog = S.kind === 'grid' ? S.cog : await panelCog(panel, S.url);
     let k = pickLevel(cog.levels, limit);
     for (; k < cog.levels.length; k++) {
       const L = cog.levels[k];
@@ -1611,7 +1617,7 @@ async function buildTile(panel, z, x, y) {
       info.exactCells = C.exactCells;
       try {
         const s = await sampleRaster(panel, cogRaster(cog, L), C, M, out, { bilinear: L.res > M.R * 1.01 });
-        info.level = fmtRes(L.res, SRC.geo) + (k ? ' (ovr ' + k + ')' : ' (full)');
+        info.level = fmtRes(L.res, S.geo) + (k ? ' (ovr ' + k + ')' : ' (full)');
         info.blocks = s.blocks; info.files = s.n ? 1 : 0;
         break;
       } catch (e) { if (!e.tooLarge) throw e; }
@@ -1625,7 +1631,7 @@ async function buildTile(panel, z, x, y) {
     // GDAL's assumption: an overview covers exactly the base extent.
     let affine = null;
     if (L.role === 'overview' && pol.ovrExtent === 'base') {
-      const B = SRC.root.extent, E = L.extent;
+      const B = S.root.extent, E = L.extent;
       const ax = (E[2] - E[0]) / (B[2] - B[0]), ay = (E[3] - E[1]) / (B[3] - B[1]);
       affine = [ax, E[0] - B[0] * ax, ay, E[3] - B[3] * ay];
     }
@@ -1652,7 +1658,7 @@ async function buildTile(panel, z, x, y) {
         return { n: 0, blocks: 0 };
       }));
       const used = new Set();
-      for (const r of results) if (r.status === 'fulfilled') { info.blocks += r.value.blocks; if (r.value.res && r.value.n) used.add(fmtRes(r.value.res, SRC.geo)); }
+      for (const r of results) if (r.status === 'fulfilled') { info.blocks += r.value.blocks; if (r.value.res && r.value.n) used.add(fmtRes(r.value.res, S.geo)); }
       // a file's own pyramid bottoms out at its coarsest internal overview
       const u = Array.from(used);
       if (u.length && !(u.length === 1 && u[0] === L.name)) info.level += ', read at ' + u.join('/');
@@ -1683,8 +1689,11 @@ function lut(name) {
   return out;
 }
 let LUT = lut('grey');
+const LUTS = new Map();
+function lutFor(name) { if (!LUTS.has(name)) LUTS.set(name, lut(name)); return LUTS.get(name); }
 function tileCanvas(entry) {
-  if (entry.canvas && entry.styleKey === styleKey()) return entry.canvas;
+  const st = entry.style || (SRC && SRC.style);
+  if (entry.canvas && entry.styleKey === styleKey(st)) return entry.canvas;
   const cv = document.createElement('canvas');
   cv.width = TS; cv.height = TS;
   const cx = cv.getContext('2d');
@@ -1692,7 +1701,8 @@ function tileCanvas(entry) {
   if (entry.out.rgba) img.data.set(entry.out.rgba);
   else {
     const v = entry.out.values, d = img.data;
-    const lo = SRC.style.min, hi = SRC.style.max, sc = 255 / (hi - lo || 1);
+    const lo = st.min, hi = st.max, sc = 255 / (hi - lo || 1);
+    const LUT = lutFor(st.palette);
     for (let p = 0; p < v.length; p++) {
       const a = v[p];
       if (a !== a) continue;
@@ -1702,24 +1712,32 @@ function tileCanvas(entry) {
   }
   cx.putImageData(img, 0, 0);
   entry.canvas = cv;
-  entry.styleKey = styleKey();
+  entry.styleKey = styleKey(st);
   return cv;
 }
 // Set the colour range from the first tile with values: 2nd to 98th percentile.
-function autoRange(v) {
+function autoRange(v, st) {
+  st = st || SRC.style;
   const a = [];
   for (let p = 0; p < v.length; p += 7) if (v[p] === v[p]) a.push(v[p]);
   if (a.length < 50) return;
   a.sort((p, q) => p - q);
-  SRC.style.min = a[Math.floor(a.length * 0.02)];
-  SRC.style.max = a[Math.floor(a.length * 0.98)];
-  if (SRC.style.max <= SRC.style.min) SRC.style.max = SRC.style.min + 1;
-  SRC.style.auto = false;
+  st.min = a[Math.floor(a.length * 0.02)];
+  st.max = a[Math.floor(a.length * 0.98)];
+  if (st.max <= st.min) st.max = st.min + 1;
+  st.auto = false;
 }
-function styleKey() { return SRC ? SRC.style.palette + ':' + SRC.style.min + ':' + SRC.style.max : ''; }
+function styleKey(st) { st = st || (SRC && SRC.style); return st ? st.palette + ':' + st.min + ':' + st.max : ''; }
 
 // ------------------------------------------------------------------ panels
 const panels = [];
+// The background: a hidden panel with its own source, cache and ledger
+// (never shown or logged), always read with the recipe reader's rules.
+const BGP = {
+  k: 'bg', src: null, policy: Object.assign({}, POLICIES.recipe), presetId: 'recipe',
+  store: new Map(), queue: new Map(), active: 0, cogs: new Map(), serverTiles: new Map(),
+  ledger: makeLedger(), limiter: makeLimiter(6), notes: new Set(), cap: 48
+};
 function makePanel(k, presetId) {
   const P = {
     k,
@@ -1771,7 +1789,9 @@ function pump(P) {
     buildTile(P, best.z, best.x, best.y).then((res) => {
       if (gen !== P.gen) return;
       e.out = res.out; e.info = res.info; e.state = 'ready';
-      if (SRC.style.auto && res.out.values) autoRange(res.out.values);
+      const st = (P.src || SRC).style;
+      e.style = st;
+      if (st.auto && res.out.values) autoRange(res.out.values, st);
     }).catch((err) => {
       if (gen !== P.gen) return;
       e.state = 'error'; e.err = err;
@@ -1803,7 +1823,9 @@ function panelSize(P) {
 }
 function draw() {
   if (!SRC || !DISP) return;
+  if (BGP.src) BGP.wantGen = (BGP.wantGen || 0) + 1;
   for (const P of panels) drawPanel(P);
+  if (BGP.src) pump(BGP);
   updateHuds();
   checkSettled();
 }
@@ -1829,6 +1851,24 @@ function drawPanel(P) {
   const sx = (X) => (X - vx0) / VIEW.res, sy = (Y) => (vy1 - Y) / VIEW.res;
   const ccx = (VIEW.cx - DISP.origin[0]) / span, ccy = (DISP.origin[1] - VIEW.cy) / span;
   ctx.imageSmoothingEnabled = true;
+  if (BGP.src && tx1 >= tx0 && ty1 >= ty0 && (tx1 - tx0 + 1) * (ty1 - ty0 + 1) < 900) {
+    // the background: same tiles, same pipeline, its own source and cache
+    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+      const e = want(BGP, z, tx, ty, Math.hypot(tx + 0.5 - ccx, ty + 0.5 - ccy));
+      const X = DISP.origin[0] + tx * span, Y = DISP.origin[1] - ty * span;
+      const dx = sx(X), dy = sy(Y), dw = span / VIEW.res;
+      if (e && e.state === 'ready') { if (!e.info.empty) ctx.drawImage(tileCanvas(e), dx, dy, dw + 0.5, dw + 0.5); continue; }
+      for (let up = 1; up <= 4 && z - up >= 0; up++) {
+        const pz = z - up, f = 1 << up;
+        const pe = BGP.store.get(pz + '/' + Math.floor(tx / f) + '/' + Math.floor(ty / f));
+        if (pe && pe.state === 'ready' && !pe.info.empty) {
+          const sub = TS / f;
+          ctx.drawImage(tileCanvas(pe), (tx % f) * sub, (ty % f) * sub, sub, sub, dx, dy, dw + 0.5, dw + 0.5);
+          break;
+        }
+      }
+    }
+  }
   if (tx1 >= tx0 && ty1 >= ty0 && (tx1 - tx0 + 1) * (ty1 - ty0 + 1) < 900) {
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
       const e = want(P, z, tx, ty, Math.hypot(tx + 0.5 - ccx, ty + 0.5 - ccy));
@@ -2291,6 +2331,7 @@ function viewLinkUrl() {
   q.set('display', DISP.native ? 'source' : DISP.crs);
   const geo = isGeographic(DISP.crs);
   q.set('at', [VIEW.cx, VIEW.cy].map((v) => v.toFixed(geo ? 6 : 1)).join(',') + ',' + VIEW.res.toPrecision(6));
+  if (BGP.id) q.set('bg', BGP.id);
   for (const P of panels) {
     q.set(P.k, P.presetId);
     if (P.presetId === 'custom') q.set(P.k + 'k', KNOBS.map((kn) => P.policy[kn.key]).join(','));
@@ -2345,6 +2386,7 @@ function updateRecipe() {
 
 // ------------------------------------------------------------------ view & interaction
 function setDisplay(code) {
+  resetPanel(BGP, true);
   if (code === 'source') DISP = Object.assign({ crs: SRC.crs }, nativeDisplay(SRC));
   else if (DISPLAYS[code] && DISPLAYS[code].proj) DISP = Object.assign(customDisplay(code), { label: DISPLAYS[code].label });
   else if (DISPLAYS[code]) DISP = Object.assign({ crs: code }, DISPLAYS[code]);
@@ -2650,6 +2692,24 @@ async function applyDisplay(code) {
   return true;
 }
 
+const BACKGROUNDS = ['esri', 'osm', 'gibs3031', 'gibs3413', 'eox', 'nasa3031', 'gebco'];
+async function setBackground(id) {
+  BGP.src = null;
+  BGP.id = typeof id === 'string' ? id : '';
+  resetPanel(BGP, false);
+  if (id) {
+    const p = typeof id === 'string' ? PRESETS.find((q) => q.id === id) : id;
+    try {
+      BGP.src = await loadSource(Object.assign({}, p, { style: Object.assign({}, p.style || {}) }), true);
+      if (BGP.src && BGP.src.style.min === null && !BGP.src.rgba) { BGP.src.style.auto = true; BGP.src.style.min = 0; BGP.src.style.max = 1; }
+      resetPanel(BGP, false);
+    } catch (e) {
+      panels.forEach((P) => P.notes.add('background: ' + (e.message || e)));
+      scheduleHud();
+    }
+  }
+  scheduleDraw();
+}
 function init() {
   panels.push(makePanel('a', 'deck'), makePanel('b', 'recipe'));
   const pitems = [{ value: 'deck', label: 'deck.gl-raster defaults' }, { value: 'recipe', label: 'recipe reader' }, { value: 'gdal', label: 'gdalwarp rules' }, { value: 'custom', label: 'custom' }];
@@ -2704,6 +2764,11 @@ function init() {
   });
   $('projIn').addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && $('projIn').value.trim()) applyDisplay($('projIn').value); });
   for (const id of ['tMachinery', 'tFoot', 'tGrat', 'tCoast', 'tIce']) $(id).addEventListener('change', scheduleDraw);
+  fillSelect($('bgSel'), [{ value: '', label: 'none' }].concat(BACKGROUNDS.map((id) => {
+    const p = PRESETS.find((q) => q.id === id);
+    return { value: id, label: p.label.replace(/ \(.*\)$/, '') };
+  })), '');
+  $('bgSel').addEventListener('change', () => setBackground($('bgSel').value));
   $('reset').addEventListener('click', () => { for (const P of panels) resetPanel(P, false); startView(); scheduleDraw(); });
   document.querySelectorAll('.dtabs [role=tab]').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.dtabs [role=tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
@@ -2737,6 +2802,7 @@ function init() {
   const p = PRESETS.find((x) => x.id === want) || { url: dsnToUrl(want) };
   if (p.id) $('preset').value = p.id;
   else { const o = document.createElement('option'); o.value = ''; o.textContent = 'Your URL'; $('preset').prepend(o); $('preset').value = ''; }
+  if (q.get('bg') && BACKGROUNDS.includes(q.get('bg'))) { $('bgSel').value = q.get('bg'); setBackground(q.get('bg')); }
   useSource(p, q.get('display') || undefined).then(() => { if (SRC && (q.has('at') || q.has('a') || q.has('b') || q.has('acap') || q.has('bcap'))) applyLinkState(q); });
   $('makeLink').addEventListener('click', () => {
     if (!SRC) return;
@@ -2750,7 +2816,7 @@ function init() {
     if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, () => $('viewLink').select());
     else $('viewLink').select();
   });
-  window.GEARBOX = { panels, VIEW, settled: () => !!(viewStart && viewStart.logged), get SRC() { return SRC; }, get DISP() { return DISP; }, logRows, zoomAt, viewChanged, useSource, setDisplay };
+  window.GEARBOX = { panels, BGP, setBackground, VIEW, settled: () => !!(viewStart && viewStart.logged), get SRC() { return SRC; }, get DISP() { return DISP; }, logRows, zoomAt, viewChanged, useSource, setDisplay };
 }
 init();
 })();
