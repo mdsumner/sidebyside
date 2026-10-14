@@ -1178,10 +1178,16 @@ function zarrStore(base, ledger, limiter) {
 // chunk). Metadata comes from the references; chunk bytes are ranges of the
 // original files (netCDF/HDF5 on a server), fetched only when a view needs
 // them. The reference tables are read with hyparquet.
+// hyparquet decodes Snappy itself; ZSTD, GZIP, Brotli and LZ4 come from
+// hyparquet-compressors, passed in as `compressors`.
 const HYPARQUET = 'https://cdn.jsdelivr.net/npm/hyparquet@1.31.4/+esm';
+const HYPARQUET_COMPRESSORS = 'https://cdn.jsdelivr.net/npm/hyparquet-compressors@1.1.2/+esm';
 let hmod = null;
 function hyparquet() {
-  if (!hmod) { hmod = import(HYPARQUET); hmod.catch(() => { hmod = null; }); }
+  if (!hmod) {
+    hmod = Promise.all([import(HYPARQUET), import(HYPARQUET_COMPRESSORS)]).then(([h, c]) => ({ read: h.parquetReadObjects, compressors: c.compressors }));
+    hmod.catch(() => { hmod = null; });
+  }
   return hmod;
 }
 // Python's json writes bare NaN and Infinity; JSON does not allow them.
@@ -1208,7 +1214,7 @@ function refsStore(base, ledger, limiter) {
         if (!r.ok) throw new Error('HTTP ' + r.status + ' reading references for ' + v);
         const h = await hyparquet();
         // utf8: false keeps the raw column as bytes; the path column is then decoded here
-        const rows = await h.parquetReadObjects({ file: r.buf, columns: ['path', 'offset', 'size', 'raw'], utf8: false });
+        const rows = await h.read({ file: r.buf, columns: ['path', 'offset', 'size', 'raw'], utf8: false, compressors: h.compressors });
         const td = new TextDecoder();
         for (const row of rows) if (row.path && typeof row.path !== 'string') row.path = td.decode(row.path);
         return rows;

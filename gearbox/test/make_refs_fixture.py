@@ -37,7 +37,8 @@ def write_refs(var, recs):
                         "offset": pa.array([r[1] for r in part], pa.int32()),
                         "size": pa.array([r[2] for r in part], pa.int32()),
                         "raw": pa.array([r[3] for r in part], pa.binary())})
-        pq.write_table(tbl, os.path.join(root, var, "refs.%d.parq" % (f // rs)))
+        # chunk tables in Snappy, coordinate tables in ZSTD, as real stores mix them
+        pq.write_table(tbl, os.path.join(root, var, "refs.%d.parq" % (f // rs)), compression="snappy" if var == "ssh" else "zstd")
 write_refs("ssh", [(target, o, n, None) for o, n in rows])
 write_refs("yt_ocean", [(None, 0, 0, lat.astype("<f8").tobytes())])
 write_refs("xt_ocean", [(None, 0, 0, lon.astype("<f8").tobytes())])

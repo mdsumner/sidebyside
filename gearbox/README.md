@@ -17,7 +17,8 @@ source in the browser, with no server in between:
 - **virtual Zarr**: kerchunk references in Parquet (a `.zmetadata` with
   `record_size`, then `<var>/refs.<n>.parq`). The store is metadata only;
   each chunk is a byte range of an original netCDF/HDF5 file, read with
-  hyparquet and fetched only when a view needs it. The file server must
+  hyparquet (Snappy, plus ZSTD, GZIP, Brotli and LZ4 through
+  hyparquet-compressors) and fetched only when a view needs it. The file server must
   allow cross-origin range requests. A file server that throttles at a
   dozen concurrent requests sees at most six per panel.
 

@@ -9,6 +9,7 @@ ROUTES = {
     "fzstd@0.1.1/umd/index.js": LIB + "/fzstd/package/umd/index.js",
     "zarrita@0.7.5/+esm": "/home/claude/work/zb/zarrita-bundle.mjs",
     "hyparquet@1.31.4/+esm": "/home/claude/work/zb/hyparquet-bundle.mjs",
+    "hyparquet-compressors@1.1.2/+esm": "/home/claude/work/zb/hyparquet-compressors-bundle.mjs",
 }
 
 async def main(base, outdir, queries, dpr):
