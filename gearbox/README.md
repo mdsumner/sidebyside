@@ -49,6 +49,12 @@ python3 -m http.server 8000
 # then open http://localhost:8000/?src=rema
 ```
 
+**Open file** reads a GeoTIFF or COG from your device (or a VRT whose
+sources are URLs). It is read in place through range slices of the file,
+block by block like a remote COG, and nothing is uploaded. The picker has
+no file-type filter, because phones grey out files whose type they cannot
+guess. A local file cannot go in a view link.
+
 Query parameters:
 
 - `src`: a preset id (`rema`, `rema32`, `gebco`, `eox`, `nasa3031`, `s2`,

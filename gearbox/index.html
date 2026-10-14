@@ -174,6 +174,8 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
   <div class="field">
     <input id="url" type="text" spellcheck="false" placeholder="COG, VRT or {z}/{x}/{y} tile URL" aria-label="Source URL">
     <button id="load" class="btn primary">Load</button>
+    <button id="openFile" class="btn" title="Open a GeoTIFF/COG (or a VRT whose sources are URLs) from this device; nothing is uploaded">Open file</button>
+    <input id="fileIn" type="file" hidden aria-label="Open a raster file">
   </div>
   <div class="field">
     <label for="display">Display CRS</label>
@@ -640,8 +642,30 @@ function buildIndex(sources, extent) {
 // ------------------------------------------------------------------ COG headers
 // Opened per panel, through that panel's client. A file is its levels:
 // full resolution plus internal overviews, finest first.
+// Local files: a File answers range requests through slices, so a COG on
+// disk is read block by block like a remote one, and the ledger counts the
+// bytes read. Nothing leaves the device.
+const FILES = new Map();
+class FileClient {
+  constructor(file, ledger) { this.file = file; this.ledger = ledger; }
+  async request({ headers } = {}) {
+    const rng = headers && (headers.Range || headers.range);
+    const size = this.file.size;
+    let a = 0, b = size - 1;
+    const m = rng && /bytes=(\d*)-(\d*)/.exec(rng);
+    if (m) {
+      if (m[1] === '') { a = Math.max(0, size - +m[2]); }
+      else { a = +m[1]; b = m[2] ? Math.min(size - 1, +m[2]) : size - 1; }
+    }
+    const buf = await this.file.slice(a, b + 1).arrayBuffer();
+    this.ledger.req++; this.ledger.bytes += buf.byteLength; scheduleHud();
+    const hdr = { 'content-range': 'bytes ' + a + '-' + b + '/' + size, 'content-type': 'application/octet-stream' };
+    return { status: m ? 206 : 200, ok: true, getHeader: (n) => hdr[n.toLowerCase()], getData: async () => buf };
+  }
+}
 async function openCogWith(url, ledger, limiter) {
-  const t = await GT.fromCustomClient(new LedgerClient(url, ledger, limiter), { cacheSize: 128, blockSize: 65536 });
+  const client = /^file:/.test(url) && FILES.has(url) ? new FileClient(FILES.get(url), ledger) : new LedgerClient(url, ledger, limiter);
+  const t = await GT.fromCustomClient(client, { cacheSize: 128, blockSize: 65536 });
   ledger.files++;
   const n = await t.getImageCount();
   const imgs = [];
@@ -729,10 +753,14 @@ async function loadSource(spec) {
     src.levels = Z.levels.map((L) => ({ name: fmtRes(L.res, isGeographic(Z.crs)), res: L.res }));
     src.dsn = 'ZARR:"' + (Z.virtual ? '/vsikerchunk_parquet_ref/{/vsicurl/' + Z.opts.base + '}' : '/vsicurl/' + Z.opts.base) + '"' + (Z.levels.length === 1 && Z.levels[0].path && Z.levels[0].path !== '/' ? ':' + Z.levels[0].path : '');
   } else if (/\.vrt(\?|$)/i.test(url)) {
-    const r = await ledgerFetch(setupLedger, null, url);
-    if (!r.ok) throw new Error('HTTP ' + r.status + ' reading ' + url);
-    const text = new TextDecoder().decode(r.buf);
-    const v = parseVrt(text, url);
+    let text;
+    if (/^file:/.test(url) && FILES.has(url)) text = await FILES.get(url).text();
+    else {
+      const r = await ledgerFetch(setupLedger, null, url);
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' reading ' + url);
+      text = new TextDecoder().decode(r.buf);
+    }
+    const v = parseVrt(text, /^file:/.test(url) ? location.href : url);
     if (!v.crs && v.wkt) {
       // no EPSG id: hand the WKT to proj4js, which reads WKT1
       const key = 'VRT:' + url;
@@ -769,6 +797,7 @@ async function loadSource(spec) {
     src.dsn = urlToDsn(url);
     src.levels = cog.levels.map((l) => ({ name: fmtRes(l.res, isGeographic(cog.crs)), res: l.res }));
   }
+  if (/^file:/.test(url)) src.dsn = url.slice(5).replace(/#\.vrt$/, '');
   src.geo = isGeographic(src.crs);
   src.global = src.geo && (src.extent[2] - src.extent[0]) > 359;
   if (seq !== srcSeq) return null;
@@ -2253,6 +2282,7 @@ function renderLog() {
 // Opt-in: built only when asked. Knobs of a custom panel ride along in
 // KNOBS order (ak=1.5,css,recipe,own,output).
 function viewLinkUrl() {
+  if (/^file:/.test(SRC.url)) return '(a local file cannot go in a link; the source stays on this device)';
   const q = new URLSearchParams();
   const pre = PRESETS.find((p) => p.url === SRC.spec.url);
   q.set('src', pre ? pre.id : SRC.spec.url);
@@ -2634,6 +2664,19 @@ function init() {
     useSource(p || { url: dsnToUrl(u) });
   });
   $('url').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') $('load').click(); });
+  // No accept= filter: phones grey out files whose type they cannot guess.
+  $('openFile').addEventListener('click', () => $('fileIn').click());
+  $('fileIn').addEventListener('change', async () => {
+    const f = $('fileIn').files && $('fileIn').files[0];
+    if (!f) return;
+    const head = await f.slice(0, 64).text().catch(() => '');
+    const isVrt = /\.vrt$/i.test(f.name) || /^\s*<VRTDataset/.test(head);
+    const key = 'file:' + f.name + (isVrt ? '#.vrt' : '');
+    FILES.set(key, f);
+    $('fileIn').value = '';
+    await useSource({ url: key, display: 'source' });
+    $('url').value = f.name + ' (local)';
+  });
   $('display').addEventListener('change', () => {
     const v = $('display').value;
     $('projIn').hidden = v !== 'custom';
