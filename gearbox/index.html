@@ -146,6 +146,8 @@ table.log tr.sep td { border-bottom: 0; }
 .tablewrap { overflow-x: auto; }
 pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px; overflow-x: auto; white-space: pre; margin: 6px 0; }
 .prose { max-width: 78ch; }
+.linkrow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+#viewLink { flex: 1; min-width: 0; font: 12px var(--f-mono); }
 .prose p { margin: 0.4em 0; }
 .prose h3 { font: 700 13px var(--f-display); text-transform: uppercase; letter-spacing: 0.05em; margin: 12px 0 4px; }
 .muted { color: var(--muted); }
@@ -234,6 +236,8 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
       </div>
       <pre class="recipe" id="recipe"></pre>
       <button class="btn" id="copyRecipe">Copy</button>
+      <div class="prose"><h3>Link to this view</h3><p>A link that reopens this source, display CRS, view and both panels' policies.</p></div>
+      <div class="linkrow"><button class="btn" id="makeLink">Make link</button><input id="viewLink" type="text" readonly hidden aria-label="Link to this view"><button class="btn" id="copyLink" hidden>Copy</button></div>
     </div>
     <div data-pane="about" hidden>
       <div class="prose" id="about">
@@ -1612,6 +1616,46 @@ function renderLog() {
 }
 
 // ------------------------------------------------------------------ recipe
+// ------------------------------------------------------------------ links
+// Opt-in: built only when asked. Knobs of a custom panel ride along in
+// KNOBS order (ak=1.5,css,recipe,own,output).
+function viewLinkUrl() {
+  const q = new URLSearchParams();
+  const pre = PRESETS.find((p) => p.url === SRC.spec.url);
+  q.set('src', pre ? pre.id : SRC.spec.url);
+  q.set('display', DISP.native ? 'source' : DISP.crs);
+  const geo = isGeographic(DISP.crs);
+  q.set('at', [VIEW.cx, VIEW.cy].map((v) => v.toFixed(geo ? 6 : 1)).join(',') + ',' + VIEW.res.toPrecision(6));
+  for (const P of panels) {
+    q.set(P.k, P.presetId);
+    if (P.presetId === 'custom') q.set(P.k + 'k', KNOBS.map((kn) => P.policy[kn.key]).join(','));
+  }
+  return location.origin + location.pathname + '?' + q.toString();
+}
+function applyLinkState(q) {
+  for (const P of panels) {
+    const id = q.get(P.k);
+    if (!id || !(POLICIES[id] || id === 'custom')) continue;
+    if (id === 'custom') {
+      const vals = (q.get(P.k + 'k') || '').split(',');
+      P.policy = Object.assign({}, POLICIES[P.presetId] || POLICIES.recipe, { label: 'custom' });
+      KNOBS.forEach((kn, i) => { if (vals[i] !== undefined && vals[i] !== '') P.policy[kn.key] = typeof kn.options[0][0] === 'number' ? +vals[i] : vals[i]; });
+      P.presetId = 'custom';
+      $('name' + P.k.toUpperCase()).textContent = 'custom';
+    } else {
+      P.policy = Object.assign({}, POLICIES[id]);
+      P.presetId = id;
+      $('name' + P.k.toUpperCase()).textContent = POLICIES[id].label;
+    }
+    $('preset' + P.k.toUpperCase()).value = P.presetId;
+    resetPanel(P, true);
+    renderKnobs(P);
+  }
+  const at = (q.get('at') || '').split(',').map(Number);
+  if (at.length === 3 && at.every((v) => isFinite(v)) && at[2] > 0) { VIEW.cx = at[0]; VIEW.cy = at[1]; VIEW.res = at[2]; }
+  startView(); updateRecipe(); scheduleDraw();
+}
+
 function updateRecipe() {
   if (!SRC || !DISP) return;
   const [W, H] = panelSize(panels[0]);
@@ -1640,7 +1684,10 @@ async function prepareCustom(def) {
   def = def.trim();
   if (/^EPSG:\d+$/i.test(def)) return ensureCrs(def.toUpperCase());
   if (!/^\+proj=/.test(def)) throw new Error('give a PROJ string starting +proj= or an EPSG code');
-  // PROJ defaults false easting and northing to 0; proj4js needs them stated
+  // PROJ defaults lat_0, lon_0 and the false easting and northing to 0; proj4js
+  // needs some of them stated
+  if (!/\+lat_0=/.test(def)) def += ' +lat_0=0';
+  if (!/\+lon_0=/.test(def)) def += ' +lon_0=0';
   if (!/\+x_0=/.test(def)) def += ' +x_0=0';
   if (!/\+y_0=/.test(def)) def += ' +y_0=0';
   let t;
@@ -1962,7 +2009,19 @@ function init() {
   const p = PRESETS.find((x) => x.id === want) || { url: dsnToUrl(want) };
   if (p.id) $('preset').value = p.id;
   else { const o = document.createElement('option'); o.value = ''; o.textContent = 'Your URL'; $('preset').prepend(o); $('preset').value = ''; }
-  useSource(p, q.get('display') || undefined);
+  useSource(p, q.get('display') || undefined).then(() => { if (SRC && (q.has('at') || q.has('a') || q.has('b'))) applyLinkState(q); });
+  $('makeLink').addEventListener('click', () => {
+    if (!SRC) return;
+    $('viewLink').value = viewLinkUrl();
+    $('viewLink').hidden = false; $('copyLink').hidden = false;
+    $('viewLink').select();
+  });
+  $('copyLink').addEventListener('click', () => {
+    const t = $('viewLink').value;
+    const done = () => { $('copyLink').textContent = 'Copied'; setTimeout(() => { $('copyLink').textContent = 'Copy'; }, 1200); };
+    if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, () => $('viewLink').select());
+    else $('viewLink').select();
+  });
   window.GEARBOX = { panels, VIEW, settled: () => !!(viewStart && viewStart.logged), get SRC() { return SRC; }, get DISP() { return DISP; }, logRows, zoomAt, viewChanged, useSource, setDisplay };
 }
 init();

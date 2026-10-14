@@ -155,6 +155,14 @@ Gearbox has a knob for it: "base extent (GDAL)" against "file's own".
 **Pathway, easy, once section 3 exists.** A level that is its own file
 carries its own transform. Use it.
 
+**Levels can also differ in content.** REMA's 100 m, 500 m and 1 km files
+are the gap-filled product (`..._filled_cop30_...`, filled from a 30 m
+global DEM), while the 2 m tiles and the 10 m and 32 m mosaics are not. In Gearbox, a coastal view drawn from the 2 m files (through their own
+128 m overviews) shows holes where the 100 m overview shows filled terrain.
+A pyramid by reference can mix products without saying so. A level
+descriptor that carries a product name or a note, and a reader that can show
+which level answered, make that visible rather than surprising.
+
 ## 5. Mesh error: you already match GDAL
 
 deck.gl-raster's `maxError` default of 0.125 source pixels is gdalwarp's
