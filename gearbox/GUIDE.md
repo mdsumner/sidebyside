@@ -155,13 +155,15 @@ Gearbox has a knob for it: "base extent (GDAL)" against "file's own".
 **Pathway, easy, once section 3 exists.** A level that is its own file
 carries its own transform. Use it.
 
-**Levels can also differ in content.** REMA's 100 m, 500 m and 1 km files
-are the gap-filled product (`..._filled_cop30_...`, filled from a 30 m
-global DEM), while the 2 m tiles and the 10 m and 32 m mosaics are not. In Gearbox, a coastal view drawn from the 2 m files (through their own
-128 m overviews) shows holes where the 100 m overview shows filled terrain.
-A pyramid by reference can mix products without saying so. A level
-descriptor that carries a product name or a note, and a reader that can show
-which level answered, make that visible rather than surprising.
+**Levels can also differ in coverage.** REMA's 2 m tiles stop at the
+coast: there are no files over the sea. The 100 m, 500 m and 1 km overview
+files are the filled product (`..._filled_cop30_...`) and carry values
+there, with bathymetry infill. In Gearbox a coastal view drawn from the 2 m
+files (per-file pyramids, through each file's own coarse overview) is empty
+over the sea, and the same view drawn from the 100 m overview is not. A
+pyramid by reference can mix coverage without saying so. A level descriptor
+that carries a note on its product, and a reader that shows which level
+answered, make that visible rather than surprising.
 
 ## 5. Mesh error: you already match GDAL
 
