@@ -37,14 +37,14 @@ python3 -m http.server 8000
 Query parameters:
 
 - `src`: a preset id (`rema`, `rema32`, `gebco`, `eox`, `nasa3031`, `s2`,
-  `mur`, `ecmwf`, `osm`, `esri`, `gibs3031`, `gibs3413`) or a URL. A URL
+  `mur`, `ecmwf`, `dep`, `dep4326`, `osm`, `esri`, `gibs3031`, `gibs3413`) or a URL. A URL
   containing `{z}` is a tile template, one ending `.vrt` is a VRT, one with
   `.zarr` or a `#var=` fragment is Zarr, anything else is a COG. A tile
   template can carry its zoom range: `.../{z}/{x}/{y}.png#maxz=12`. A Zarr
   URL can carry `#var=NAME&sel=dim:index,dim:-1&crs=EPSG:xxxx` (a negative
   index counts from the end; unlisted dimensions are read at 0).
 - `display`: `EPSG:3857`, `EPSG:4326`, `EPSG:3031`, `EPSG:3413`,
-  `EPSG:8857`, `source`, any other EPSG code, or a PROJ string such as
+  `EPSG:8857`, `EPSG:3832` (Pacific Mercator), `source`, any other EPSG code, or a PROJ string such as
   `+proj=laea +lat_0=-90 +lon_0=140 +datum=WGS84` (URL-encoded). The display
   menu takes the same through "PROJ string or EPSG code...".
 
@@ -89,6 +89,16 @@ one overview for the whole output from the ratio across the window,
 approximates the transform along scanlines, and resamples nearest by
 default. Gearbox picks a level per screen tile, approximates on a lattice,
 and uses bilinear when upsampling, for every preset.
+
+The display menu also offers Pacific-centred views (Plate Carree, Mercator,
+Equal Earth, Robinson, Mollweide at lon_0 150 or 180), which put the seam in
+the Atlantic so data across 180 degrees draws in one piece. The `dep`
+preset is a VRT in `data/` over the Pacific Landsat GeoMAD test tiles, one
+column of which crosses the antimeridian.
+
+Each panel also has **ask above**: how many files (mosaics) or chunks
+(Zarr) one screen tile may read before the page stops and asks. It is not a
+policy, so changing it keeps the preset; it rides along in view links.
 
 ## What is on screen
 

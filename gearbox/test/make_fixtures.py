@@ -111,3 +111,33 @@ for z in range(4):
             os.makedirs(os.path.join(out, "xyz", str(z), str(x)), exist_ok=True)
             im.save(os.path.join(out, "xyz", str(z), str(x), "%d.png" % y))
 print("fixtures in", out)
+
+# 5. antimeridian: a 4 x 3 grid of 320 px tiles at 300 m in EPSG:3832 laid out
+# like the Pacific GeoMAD test tiles (columns 064-067, rows 022-020 north to
+# south); column 066 crosses 180 degrees. Values are longitude-coded so a
+# misplaced piece shows.
+from rasterio.warp import transform as rtransform
+srcs = []
+for j, r in enumerate([22, 21, 20]):
+    for i, c in enumerate([64, 65, 66, 67]):
+        tx0 = 3336000 + (c - 66) * 96000
+        ty0 = -1888000 + (r - 21) * 96000
+        xs = tx0 + (np.arange(320) + 0.5) * 300
+        ys = ty0 - (np.arange(320) + 0.5) * 300
+        X, Y = np.meshgrid(xs, ys)
+        lon, lat = rtransform("EPSG:3832", "EPSG:4326", X.ravel(), Y.ravel())
+        lon = np.asarray(lon).reshape(X.shape); lat = np.asarray(lat).reshape(X.shape)
+        v = (6000 + 4000 * ((np.mod(lon, 360) - 175) / 10) + 300 * np.sin(lat * 3)).clip(1, 65535).astype("uint16")
+        fn = "am_%03d_%03d.tif" % (c, r)
+        write_cog(os.path.join(out, fn), v, from_origin(tx0, ty0, 300, 300), "EPSG:3832", nodata=0)
+        srcs.append((fn, i, j))
+L = ['<VRTDataset rasterXSize="1280" rasterYSize="960">', '  <SRS>EPSG:3832</SRS>',
+     '  <GeoTransform>3144000.0, 300.0, 0.0, -1792000.0, 0.0, -300.0</GeoTransform>',
+     '  <VRTRasterBand dataType="UInt16" band="1">', '    <NoDataValue>0</NoDataValue>']
+for fn, i, j in srcs:
+    L += ['    <SimpleSource>', '      <SourceFilename relativeToVRT="1">%s</SourceFilename>' % fn,
+          '      <SourceBand>1</SourceBand>', '      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>',
+          '      <DstRect xOff="%d" yOff="%d" xSize="320" ySize="320"/>' % (i * 320, j * 320), '    </SimpleSource>']
+L += ['  </VRTRasterBand>', '</VRTDataset>']
+open(os.path.join(out, "antimeridian.vrt"), "w").write("\n".join(L) + "\n")
+print("antimeridian fixture in", out)

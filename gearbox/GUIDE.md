@@ -207,7 +207,14 @@ consequences:
   short of each pole.
 - **The antimeridian is a lattice cell like any other.** Cells whose corners
   span more than 180 degrees of longitude are transformed per pixel; no
-  unwrapping.
+  unwrapping. The `dep` preset is the Pacific Landsat GeoMAD test mosaic from
+  #673, twelve EPSG:3832 tiles with one column across 180 degrees, as a VRT.
+  It draws in one piece in its own CRS and in the Pacific-centred displays
+  (Plate Carree, Mercator, Equal Earth, Robinson and Mollweide at lon_0 150
+  or 180), and splits cleanly at the map edge in Web Mercator and lon/lat.
+  Where the seam falls is a property of the display, so offering
+  Pacific-centred views is as much a part of antimeridian support as cutting
+  meshes at the seam.
 - **The cost is a different traversal.** Screen tiles are display-grid tiles,
   so the tile index is not the source's. Fetching still happens in source
   blocks (Gearbox reads windows, geotiff.js reads blocks), but caching

@@ -297,6 +297,7 @@ const CRSDEFS = {
   'EPSG:3995': '+proj=stere +lat_0=90 +lat_ts=71 +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs',
   'EPSG:8857': '+proj=eqearth +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs',
   'EPSG:3577': '+proj=aea +lat_0=0 +lon_0=132 +lat_1=-18 +lat_2=-36 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs',
+  'EPSG:3832': '+proj=merc +lon_0=150 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs',
   'EPSG:6933': '+proj=cea +lat_ts=30 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs',
   'EPSG:4283': '+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs',
   'EPSG:7844': '+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs'
@@ -353,12 +354,21 @@ function fwd(t, x, y) {
 // A display grid is (crs, origin, res0, extent): 256 px tiles at res0 / 2^z.
 // It is a choice, like the warper's target grid, not a property of the data.
 const DISPLAYS = {
-  'EPSG:3857': { label: 'Web Mercator (EPSG:3857)', origin: [-MERC, MERC], res0: 2 * MERC / TS, extent: [-MERC, -MERC, MERC, MERC] },
-  'EPSG:4326': { label: 'Lon/lat (EPSG:4326)', origin: [-180, 90], res0: 360 / (2 * TS), extent: [-180, -90, 180, 90] },
+  'EPSG:3857': { group: 'Greenwich-centred', label: 'Web Mercator (EPSG:3857)', origin: [-MERC, MERC], res0: 2 * MERC / TS, extent: [-MERC, -MERC, MERC, MERC] },
+  'EPSG:4326': { group: 'Greenwich-centred', label: 'Lon/lat (EPSG:4326)', origin: [-180, 90], res0: 360 / (2 * TS), extent: [-180, -90, 180, 90] },
   'EPSG:3031': { label: 'Antarctic polar stereo (EPSG:3031)', origin: [-4194304, 4194304], res0: 8192 * 4, extent: [-4194304, -4194304, 4194304, 4194304] },
   'EPSG:3413': { label: 'Arctic polar stereo (EPSG:3413)', origin: [-4194304, 4194304], res0: 8192 * 4, extent: [-4194304, -4194304, 4194304, 4194304] },
-  'EPSG:8857': { label: 'Equal Earth (EPSG:8857)', origin: [-17243959.06, 8392927.6], res0: 34487918.12 / (2 * TS), extent: [-17243959.06, -8392927.6, 17243959.06, 8392927.6] }
+  'EPSG:8857': { group: 'Greenwich-centred', label: 'Equal Earth (EPSG:8857)', origin: [-17243959.06, 8392927.6], res0: 34487918.12 / (2 * TS), extent: [-17243959.06, -8392927.6, 17243959.06, 8392927.6] },
+  // Pacific-centred: the seam moves to the Atlantic, so data across 180
+  // degrees draws in one piece. Extents come from the projection itself.
+  '+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=180 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs': { group: 'Pacific-centred', label: 'Lon/lat, Pacific (Plate Carree, lon_0=180)', proj: true },
+  'EPSG:3832': { group: 'Pacific-centred', label: 'Mercator, Pacific (EPSG:3832, lon_0=150)', proj: true },
+  '+proj=eqearth +lon_0=150 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs': { group: 'Pacific-centred', label: 'Equal Earth, Asia-Pacific (EPSG:8859, lon_0=150)', proj: true },
+  '+proj=robin +lon_0=180 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs': { group: 'Pacific-centred', label: 'Robinson, Pacific (lon_0=180)', proj: true },
+  '+proj=moll +lon_0=180 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs': { group: 'Pacific-centred', label: 'Mollweide, Pacific (lon_0=180)', proj: true }
 };
+for (const k of Object.keys(DISPLAYS)) if (DISPLAYS[k].proj && !CRSDEFS[k]) { CRSDEFS[k] = k; proj4.defs(k, k); }
+for (const k of ['EPSG:3031', 'EPSG:3413']) DISPLAYS[k].group = 'Polar';
 function nativeDisplay(src) {
   const e = src.extent;
   const w = e[2] - e[0], h = e[3] - e[1];
@@ -374,6 +384,8 @@ const PRESETS = [
   { group: 'COGs', id: 'eox', label: 'EOxCloudless 2024 (global, EPSG:4326, RGB)', url: 'https://s3.us-east-1.amazonaws.com/ds-deck.gl-raster-public/cog/viewing-basic_s2cloudless-2024_geodetic-zoom-3_3bands_8bit.tif', display: 'EPSG:3857' },
   { group: 'COGs', id: 'nasa3031', label: 'NASA Explorer base map (EPSG:3031, RGB)', url: S3COOP + '/scar/distant/supporting/EO-basemap_ps_cog.tif', display: 'EPSG:3031' },
   { group: 'COGs', id: 's2', label: 'Sentinel-2 TCI 55GEN (UTM 55S, RGB)', url: 'https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/55/G/EN/2024/12/S2A_55GEN_20241204_0_L2A/TCI.tif', display: 'EPSG:3857' },
+  { group: 'Antimeridian', id: 'dep', label: 'Pacific Landsat GeoMAD red, 12 COGs across 180 (VRT, EPSG:3832)', url: new URL('data/dep_ls_geomad_red_antimeridian.vrt', location.href).href, display: 'source', style: { palette: 'grey', min: 6000, max: 12000 }, note: 'Twelve 96 km tiles in Pacific Mercator, three of them across the antimeridian. Seamless in their own CRS and in the Pacific-centred displays; switch to Web Mercator or lon/lat to put the seam through them.' },
+  { group: 'Antimeridian', id: 'dep4326', label: 'Same mosaic, drawn on lon/lat (the seam splits it)', url: new URL('data/dep_ls_geomad_red_antimeridian.vrt', location.href).href, display: 'EPSG:4326', style: { palette: 'grey', min: 6000, max: 12000 } },
   { group: 'Zarr', id: 'mur', label: 'GHRSST MUR SST 0.01 deg (Zarr v2, one level)', url: 'https://mur-sst.s3.us-west-2.amazonaws.com/zarr-v1#var=analysed_sst&sel=time:-1', display: 'EPSG:3857', fit: [143, -45, 150, -39], style: { palette: 'viridis', min: 281, max: 293 }, note: 'One big array with no pyramid: windowed reads work up close, and the page says no when zoomed out.' },
   { group: 'Zarr', id: 'ecmwf', label: 'ECMWF IFS ENS 2 m temperature (Zarr v3, dynamical.org)', url: S3COOP + '/dynamical/ecmwf-ifs-ens-forecast-15-day-0-25-degree/v0.1.0.zarr#var=temperature_2m&sel=init_time:-1', display: 'EPSG:8857', style: { palette: 'viridis', min: -40, max: 40 } },
   { group: 'Tile servers', id: 'osm', label: 'OpenStreetMap (XYZ, EPSG:3857)', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', display: 'EPSG:3857', tiles: { crs: 'EPSG:3857', maxZ: 19 }, attribution: '(c) OpenStreetMap contributors' },
@@ -1292,8 +1304,7 @@ function panelZarr(panel) {
   }
   return panel.zarr;
 }
-const MAX_CHUNKS_PER_READ = 64;
-function zarrRaster(Z, L) {
+function zarrRaster(Z, L, cap) {
   const ch = L.arr.chunks;
   const elems = ch.reduce((a, b) => a * b, 1) / ch[L.yi] / ch[L.xi];
   return {
@@ -1303,7 +1314,7 @@ function zarrRaster(Z, L) {
       const ny = Math.floor((r1 - 1) / ch[L.yi]) - Math.floor(r0 / ch[L.yi]) + 1;
       const nx = Math.floor((c1 - 1) / ch[L.xi]) - Math.floor(c0 / ch[L.xi]) + 1;
       // whole chunks are the only unit: cap by chunk count and decoded size
-      if (ny * nx > MAX_CHUNKS_PER_READ || ny * nx * ch[L.yi] * ch[L.xi] * elems > 4e8) {
+      if (ny * nx > cap || ny * nx * ch[L.yi] * ch[L.xi] * elems > 4e8) {
         throw Object.assign(new Error(ny * nx + ' chunks'), { tooLarge: true });
       }
       const sel = L.dims.map((d, i) => {
@@ -1375,7 +1386,7 @@ async function buildTile(panel, z, x, y) {
       const C = fill(meshUnit(L.res));
       info.exactCells = C.exactCells;
       try {
-        const s = await sampleRaster(panel, zarrRaster(Z, L), C, M, out, { bilinear: L.res > M.R * 1.01 });
+        const s = await sampleRaster(panel, zarrRaster(Z, L, panel.cap), C, M, out, { bilinear: L.res > M.R * 1.01 });
         info.level = fmtRes(L.res, SRC.geo) + (Z.levels.length > 1 ? ' (level ' + L.path + ')' : '');
         info.blocks = s.blocks; info.files = s.n ? 1 : 0;
         break;
@@ -1413,7 +1424,7 @@ async function buildTile(panel, z, x, y) {
     if (!bb) { info.empty = true; return { info, out }; }
     const files = L.kind === 'cog' ? [L.url] : L.query(affine ? [affine[0] * bb[0] + affine[1], affine[2] * bb[1] + affine[3], affine[0] * bb[2] + affine[1], affine[2] * bb[3] + affine[3]] : bb).map((i) => L.sources[i].url);
     info.level = (L.role === 'root' ? 'base ' : 'ovr ') + L.name;
-    if (files.length > panel.fileCap) {
+    if (files.length > panel.cap) {
       info.refused = files.length;
       info.files = 0;
     } else {
@@ -1508,7 +1519,7 @@ function makePanel(k, presetId) {
     store: new Map(), queue: new Map(), active: 0,
     cogs: new Map(), serverTiles: new Map(),
     ledger: makeLedger(), limiter: makeLimiter(6),
-    notes: new Set(), fileCap: 12,
+    notes: new Set(), cap: 12,
     view: null, settled: false
   };
   return P;
@@ -1524,7 +1535,6 @@ function resetPanel(P, keepLedger) {
     P.cogs.clear(); P.serverTiles.clear(); P.zarr = null;
     P.ledger = makeLedger();
   }
-  P.fileCap = 12;
 }
 
 function want(P, z, x, y, prio) {
@@ -1799,13 +1809,13 @@ function updateHuds() {
     if (refused) {
       const n = viewFootprintFiles();
       html += '<div class="note bad">Per-file pyramids: ' + refused + ' screen tile' + (refused === 1 ? '' : 's') +
-        ' would each open more than ' + P.fileCap + ' files. This view touches about ' + n + ' files, and every one costs a header read before any pixel. MosaicLayer apps set a minZoom here.</div>' +
+        ' would each open more than ' + P.cap + ' files. This view touches about ' + n + ' files, and every one costs a header read before any pixel. MosaicLayer apps set a minZoom here.</div>' +
         '<button class="btn" data-open="' + P.k + '">Open all ' + n + ' files anyway</button>';
     }
     const tooBig = P.visible ? P.visible.filter((e) => e.info && e.info.tooBig).length : 0;
     if (tooBig) {
       html += '<div class="note bad">' + tooBig + ' screen tile' + (tooBig === 1 ? '' : 's') + ' need more than the finest level can give at this scale: more than ' +
-        MAX_CHUNKS_PER_READ + ' chunks, or a window too large to read. The store has no level coarse enough. Zoom in, or publish a pyramid.</div>';
+        P.cap + ' chunks, or a window too large to read. The store has no level coarse enough. Zoom in, or publish a pyramid.</div>';
     }
     if (P.notes.size) html += '<div class="note">' + Array.from(P.notes).slice(-2).map(esc).join('<br>') + '</div>';
     if (P.hud._last !== html) { P.hud.innerHTML = html; P.hud._last = html; }
@@ -1815,9 +1825,7 @@ document.addEventListener('click', (ev) => {
   const k = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-open');
   if (!k) return;
   const P = panels.find((p) => p.k === k);
-  P.fileCap = 5000;
-  for (const [key, e] of P.store) if (e.info && e.info.refused) P.store.delete(key);
-  scheduleDraw();
+  setCap(P, 5000);
 });
 
 let viewStart = null;
@@ -1896,6 +1904,7 @@ function viewLinkUrl() {
   for (const P of panels) {
     q.set(P.k, P.presetId);
     if (P.presetId === 'custom') q.set(P.k + 'k', KNOBS.map((kn) => P.policy[kn.key]).join(','));
+    if (P.cap !== 12) q.set(P.k + 'cap', String(P.cap));
   }
   return location.origin + location.pathname + '?' + q.toString();
 }
@@ -1918,6 +1927,7 @@ function applyLinkState(q) {
     resetPanel(P, true);
     renderKnobs(P);
   }
+  for (const P of panels) { const c = +q.get(P.k + 'cap'); if (c > 0) { P.cap = c; renderKnobs(P); } }
   const at = (q.get('at') || '').split(',').map(Number);
   if (at.length === 3 && at.every((v) => isFinite(v)) && at[2] > 0) { VIEW.cx = at[0]; VIEW.cy = at[1]; VIEW.res = at[2]; }
   startView(); updateRecipe(); scheduleDraw();
@@ -1940,6 +1950,7 @@ function updateRecipe() {
 // ------------------------------------------------------------------ view & interaction
 function setDisplay(code) {
   if (code === 'source') DISP = Object.assign({ crs: SRC.crs }, nativeDisplay(SRC));
+  else if (DISPLAYS[code] && DISPLAYS[code].proj) DISP = Object.assign(customDisplay(code), { label: DISPLAYS[code].label });
   else if (DISPLAYS[code]) DISP = Object.assign({ crs: code }, DISPLAYS[code]);
   else DISP = customDisplay(code);
   gratCache = null;
@@ -1971,7 +1982,8 @@ function customDisplay(crs) {
     if (!p || Math.abs(p[0]) > cap || Math.abs(p[1]) > cap) return;
     x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
   };
-  for (let lat = -89; lat <= 89; lat += 2) for (let lon = -179; lon <= 179; lon += 2) {
+  const latMax = /\+proj=merc/.test(projString(crs)) ? 85 : 89;
+  for (let lat = -latMax; lat <= latMax; lat += 1) for (let lon = -179.5; lon <= 179.5; lon += 1) {
     const p = fwd(t, lon, lat);
     if (!p) continue;
     const q = fwd({ forward: t.inverse }, p[0], p[1]);
@@ -2126,6 +2138,18 @@ function renderKnobs(P) {
     lab.appendChild(s);
     box.appendChild(lab);
   }
+  // Not a policy: how much one screen tile may read before the page asks.
+  const lab = document.createElement('label');
+  lab.title = 'Files (mosaics) or chunks (Zarr) one screen tile may read before the page stops and asks';
+  lab.appendChild(document.createTextNode('ask above'));
+  const s = document.createElement('select');
+  s.id = 'knob-' + P.k + '-cap';
+  for (const [v, t] of [[12, '12'], [48, '48'], [200, '200'], [5000, 'no limit']]) { const o = document.createElement('option'); o.value = String(v); o.textContent = t; s.appendChild(o); }
+  s.value = String(P.cap);
+  s.addEventListener('change', () => setCap(P, +s.value));
+  lab.appendChild(s);
+  lab.appendChild(document.createTextNode('files or chunks per tile'));
+  box.appendChild(lab);
   updateBadges();
 }
 function updateNotes() {
@@ -2135,6 +2159,14 @@ function updateNotes() {
     $('note' + P.k.toUpperCase()).textContent = t;
     $('preset' + P.k.toUpperCase()).title = t;
   }
+}
+function setCap(P, v) {
+  P.cap = v;
+  const sel = $('knob-' + P.k + '-cap');
+  if (sel) sel.value = String(v);
+  for (const [key, e] of P.store) if (e.info && (e.info.refused || e.info.tooBig)) P.store.delete(key);
+  startView();
+  scheduleDraw();
 }
 function updateBadges() {
   updateNotes();
@@ -2193,9 +2225,9 @@ async function useSource(spec, displayOverride) {
   scheduleDraw();
 }
 function fillDisplaySelect(value) {
-  const items = [{ value: 'source', label: 'Source CRS' + (SRC ? ' (' + shortCrs(SRC.crs) + ')' : '') }];
-  for (const k of Object.keys(DISPLAYS)) items.push({ value: k, label: DISPLAYS[k].label });
-  items.push({ value: 'custom', label: 'PROJ string or EPSG code...' });
+  const items = [{ group: 'This source', value: 'source', label: 'Source CRS' + (SRC ? ' (' + shortCrs(SRC.crs) + ')' : '') }];
+  for (const k of Object.keys(DISPLAYS)) items.push({ group: DISPLAYS[k].group, value: k, label: DISPLAYS[k].label });
+  items.push({ group: 'Any', value: 'custom', label: 'PROJ string or EPSG code...' });
   fillSelect($('display'), items);
   const custom = value && value !== 'source' && !DISPLAYS[value] && !(SRC && value === SRC.crs);
   $('display').value = SRC && value === SRC.crs && !DISPLAYS[value] ? 'source' : custom ? 'custom' : (DISPLAYS[value] || value === 'source' ? value : 'EPSG:3857');
@@ -2277,7 +2309,7 @@ function init() {
   const p = PRESETS.find((x) => x.id === want) || { url: dsnToUrl(want) };
   if (p.id) $('preset').value = p.id;
   else { const o = document.createElement('option'); o.value = ''; o.textContent = 'Your URL'; $('preset').prepend(o); $('preset').value = ''; }
-  useSource(p, q.get('display') || undefined).then(() => { if (SRC && (q.has('at') || q.has('a') || q.has('b'))) applyLinkState(q); });
+  useSource(p, q.get('display') || undefined).then(() => { if (SRC && (q.has('at') || q.has('a') || q.has('b') || q.has('acap') || q.has('bcap'))) applyLinkState(q); });
   $('makeLink').addEventListener('click', () => {
     if (!SRC) return;
     $('viewLink').value = viewLinkUrl();

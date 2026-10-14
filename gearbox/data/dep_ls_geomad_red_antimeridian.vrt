@@ -1,0 +1,79 @@
+<VRTDataset rasterXSize="1280" rasterYSize="960">
+  <SRS dataAxisToSRSAxisMapping="1,2">EPSG:3832</SRS>
+  <GeoTransform>3144000.0, 300.0, 0.0, -1792000.0, 0.0, -300.0</GeoTransform>
+  <VRTRasterBand dataType="UInt16" band="1">
+    <NoDataValue>0</NoDataValue>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/064/022/2025/dep_ls_geomad_064_022_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/065/022/2025/dep_ls_geomad_065_022_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="320" yOff="0" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/066/022/2025/dep_ls_geomad_066_022_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="640" yOff="0" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/067/022/2025/dep_ls_geomad_067_022_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="960" yOff="0" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/064/021/2025/dep_ls_geomad_064_021_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="0" yOff="320" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/065/021/2025/dep_ls_geomad_065_021_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="320" yOff="320" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/066/021/2025/dep_ls_geomad_066_021_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="640" yOff="320" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/067/021/2025/dep_ls_geomad_067_021_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="960" yOff="320" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/064/020/2025/dep_ls_geomad_064_020_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="0" yOff="640" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/065/020/2025/dep_ls_geomad_065_020_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="320" yOff="640" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/066/020/2025/dep_ls_geomad_066_020_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="640" yOff="640" xSize="320" ySize="320"/>
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://s3.us-west-2.amazonaws.com/dep-public-staging/dep_ls_geomad/0-3-1-test/067/020/2025/dep_ls_geomad_067_020_2025_red.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SrcRect xOff="0" yOff="0" xSize="320" ySize="320"/>
+      <DstRect xOff="960" yOff="640" xSize="320" ySize="320"/>
+    </SimpleSource>
+  </VRTRasterBand>
+</VRTDataset>
