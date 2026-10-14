@@ -115,13 +115,15 @@ policy, so changing it keeps the preset; it rides along in view links.
 - **file footprints**: the VRT's source files, in the display CRS.
 - **coastline**: Natural Earth 1:50m (public domain), kept in `data/`,
   projected into the display CRS.
-- **sea ice edge**: the latest daily extent from the NSIDC Sea Ice Index
-  (G02135 v4, 25 km, 15% concentration), both hemispheres, read as GeoTIFF
-  from `noaadata.apps.nsidc.org` and contoured in the browser in its own
-  polar stereographic grid, with land counted as ice so only the edge
-  against open ocean is drawn. The date shows beside the checkbox. The file
-  host must allow cross-origin requests; `?seaice=` can point at another
-  copy, with `{hemi}` `{H}` `{yyyy}` `{mm}` `{Mon}` `{dd}` in the template.
+- **sea ice edge**: the latest daily concentration from the NSIDC Sea Ice
+  Index (G02135 v4, 25 km), both hemispheres, read as GeoTIFF from
+  `noaadata.apps.nsidc.org` (searching back up to 21 days) and contoured in
+  the browser at 15% (the value 150, in tenths of a percent) in its own
+  polar stereographic grid. Land, coast and pole-hole codes count as ice, so
+  only the edge against open ocean is drawn. The date shows beside the
+  checkbox; if nothing loads, the HUD says whether the files were missing or
+  the browser was refused. `?seaice=` can point at another copy, with
+  `{hemi}` `{H}` `{yyyy}` `{mm}` `{Mon}` `{dd}` in the template.
 
 Overlays are context: their bytes are not counted in either panel's ledger.
 - **View log**: per settled view and panel, the levels drawn (with tile

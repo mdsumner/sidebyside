@@ -185,7 +185,7 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
     <label><input type="checkbox" id="tFoot"> file footprints</label>
     <label><input type="checkbox" id="tGrat" checked> graticule</label>
     <label><input type="checkbox" id="tCoast" checked> coastline</label>
-    <label title="NSIDC Sea Ice Index daily extent (15% concentration), latest day available"><input type="checkbox" id="tIce"> <span id="iceLabel">sea ice edge</span></label>
+    <label title="NSIDC Sea Ice Index daily concentration, contoured at 15%, latest day available"><input type="checkbox" id="tIce"> <span id="iceLabel">sea ice edge</span></label>
   </div>
 </header>
 
@@ -1840,12 +1840,13 @@ function loadCoast() {
     OVERLAY.coastP.catch((e) => { OVERLAY.coastP = null; panels.forEach((P) => P.notes.add(String(e.message || e))); });
   }
 }
-// NSIDC Sea Ice Index (G02135 v4) daily extent GeoTIFFs: 25 km cells, 1 is
-// ice (concentration >= 15%), 0 ocean, 253/254 coast and land, 255 missing
-// (the Arctic pole hole). The edge is contoured here, in the grid's own CRS,
-// with land counted as ice so only the ice edge against open ocean is drawn.
-// ?seaice= can point at another copy, with {h} {H} {yyyy} {mm} {Mon} {dd}.
-const SEAICE_TEMPLATE = 'https://noaadata.apps.nsidc.org/NOAA/G02135/{hemi}/daily/geotiff/{yyyy}/{mm}_{Mon}/{H}_{yyyy}{mm}{dd}_extent_v4.0.tif';
+// NSIDC Sea Ice Index (G02135 v4) daily concentration GeoTIFFs: 25 km
+// cells in tenths of a percent (0-1000), with codes above that for the pole
+// hole, coast, land and missing. The 15% edge is the contour at 150, drawn
+// in the grid's own CRS; the codes count as ice so only the edge against
+// open ocean is drawn. An extent file (1 ice, 0 ocean) also works.
+// ?seaice= can point at another copy, with {hemi} {h} {H} {yyyy} {mm} {Mon} {dd}.
+const SEAICE_TEMPLATE = 'https://noaadata.apps.nsidc.org/NOAA/G02135/{hemi}/daily/geotiff/{yyyy}/{mm}_{Mon}/{H}_{yyyy}{mm}{dd}_concentration_v4.0.tif';
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function seaIceUrl(tpl, hemi, d) {
   const p2 = (v) => String(v).padStart(2, '0');
@@ -1879,17 +1880,19 @@ function contourMask(mask, w, h) {
 async function loadIceHemisphere(tpl, hemi) {
   const crs = hemi === 'north' ? 'EPSG:3411' : 'EPSG:3412';
   const today = new Date();
-  for (let back = 1; back <= 10; back++) {
+  let blocked = 0, missing = 0, host = '';
+  for (let back = 1; back <= 21; back++) {
     const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - back));
     const url = seaIceUrl(tpl, hemi, d);
+    host = new URL(url).host;
     let tif;
     try {
       tif = await GT.fromCustomClient(new LedgerClient(url, setupLedger, null), { allowFullFile: true, blockSize: 65536 });
     } catch (e) {
-      if (e instanceof TypeError && back === 1) {
-        // a network-level failure (not a 404) on the first try is most likely CORS
-        throw new Error('sea ice: the browser could not read ' + new URL(url).host + ' (no CORS?)');
-      }
+      // a TypeError is the browser refusing the request (CORS or network);
+      // anything else is the server answering without the file
+      if (e instanceof TypeError) blocked++; else missing++;
+      if (blocked >= 3 && !missing) throw new Error('sea ice: the browser could not read files from ' + host + ' (no CORS for this page?)');
       continue;
     }
     const im = await tif.getImage();
@@ -1897,7 +1900,8 @@ async function loadIceHemisphere(tpl, hemi) {
     const [ox, oy] = im.getOrigin(), [rx, ry] = im.getResolution();
     const ras = await im.readRasters({ samples: [0], interleave: true });
     const mask = new Uint8Array(w * h);
-    for (let p = 0; p < w * h; p++) mask[p] = ras[p] === 0 ? 0 : 1;
+    const extentFile = /extent/i.test(url);
+    for (let p = 0; p < w * h; p++) mask[p] = extentFile ? (ras[p] === 0 ? 0 : 1) : (ras[p] >= 150 ? 1 : 0);
     const segs = contourMask(mask, w, h);
     const t = tf(crs, 'EPSG:4326');
     const ll = new Float64Array(segs.length);
@@ -1907,7 +1911,7 @@ async function loadIceHemisphere(tpl, hemi) {
     }
     return { date: d.toISOString().slice(0, 10), segs: ll, url };
   }
-  throw new Error('sea ice: no ' + hemi + ' extent file in the last 10 days');
+  throw new Error('sea ice: no ' + hemi + ' file from ' + host + ' in the last 21 days (' + missing + ' not found, ' + blocked + ' refused by the browser)');
 }
 function loadIce() {
   if (!OVERLAY.iceP) {
