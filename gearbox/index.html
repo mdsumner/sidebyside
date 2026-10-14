@@ -70,6 +70,7 @@ select, input[type=text] {
   background: var(--bg); border: 1px solid var(--line); border-radius: var(--r);
   padding: 4px 6px; min-width: 0;
 }
+#projIn { width: min(46ch, 70vw); font-family: var(--f-mono); font-size: 12px; }
 #url { width: min(34ch, 60vw); font-family: var(--f-mono); font-size: 12px; }
 .btn {
   border: 1px solid var(--line); background: var(--bg); border-radius: var(--r);
@@ -175,6 +176,7 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
   <div class="field">
     <label for="display">Display CRS</label>
     <select id="display"></select>
+    <input id="projIn" type="text" spellcheck="false" hidden placeholder="+proj=laea +lat_0=-90 +lon_0=140 or EPSG:3577, then Enter" aria-label="Display CRS as a PROJ string or EPSG code">
   </div>
   <div class="toggles">
     <label><input type="checkbox" id="tMachinery" checked> machinery</label>
@@ -306,6 +308,7 @@ for (let z = 48; z <= 58; z++) CRSDEFS['EPSG:283' + z] = '+proj=utm +zone=' + z 
 for (const k of Object.keys(CRSDEFS)) if (!proj4.defs(k)) proj4.defs(k, CRSDEFS[k]);
 async function ensureCrs(code) {
   if (!code) throw new Error('no CRS');
+  if (/^VRT:/.test(code) && proj4.defs(code)) return code;
   if (CRSDEFS[code]) { if (!proj4.defs(code)) proj4.defs(code, CRSDEFS[code]); return code; }
   if (proj4.defs(code)) return code;
   const m = /^EPSG:(\d+)$/.exec(code);
@@ -319,7 +322,7 @@ async function ensureCrs(code) {
   }
   throw new Error('unknown CRS ' + code + ' (add its PROJ string to CRSDEFS)');
 }
-function isGeographic(code) { return /\+proj=longlat/.test(CRSDEFS[code] || ''); }
+function isGeographic(code) { return /\+proj=longlat/.test(CRSDEFS[code] || code || ''); }
 function projString(code) { return CRSDEFS[code] || code; }
 
 const tfCache = new Map();
@@ -566,7 +569,7 @@ function parseVrt(text, baseUrl) {
     sources.push({ url, bbox: [gt[0] + xo * gt[1], gt[3] + (yo + ys) * gt[5], gt[0] + (xo + xs) * gt[1], gt[3] + yo * gt[5]] });
   }
   return {
-    w, h, gt, bands, crs: crsFromWkt(srs ? srs[1] : null),
+    w, h, gt, bands, crs: crsFromWkt(srs ? srs[1] : null), wkt: srs ? srs[1].trim() : null,
     nodata: nd ? +nd[1] : null, overviews, sources,
     extent: [gt[0], gt[3] + h * gt[5], gt[0] + w * gt[1], gt[3]],
     res: Math.abs(gt[1])
@@ -680,7 +683,17 @@ async function loadSource(spec) {
     if (!r.ok) throw new Error('HTTP ' + r.status + ' reading ' + url);
     const text = new TextDecoder().decode(r.buf);
     const v = parseVrt(text, url);
-    if (!v.crs) throw new Error('could not read the VRT SRS');
+    if (!v.crs && v.wkt) {
+      // no EPSG id: hand the WKT to proj4js, which reads WKT1
+      const key = 'VRT:' + url;
+      try {
+        proj4.defs(key, v.wkt.replace(/&quot;/g, '"'));
+        const d = proj4.defs(key);
+        CRSDEFS[key] = d && d.projName === 'longlat' ? '+proj=longlat' : key;
+        v.crs = key;
+      } catch (e) { /* fall through to the error below */ }
+    }
+    if (!v.crs) throw new Error('could not read the VRT SRS (no EPSG id, and proj4js could not parse the WKT)');
     await ensureCrs(v.crs);
     src.kind = 'vrt';
     src.crs = v.crs;
@@ -1609,15 +1622,55 @@ function updateRecipe() {
   let dsn = SRC.dsn;
   let pre = '';
   if (SRC.kind === 'tiles' && !/\$\{z\}/.test(dsn)) pre = '# a WMTS layer: open it through GDAL as WMTS:<GetCapabilities URL>,layer=...\n';
-  const txt = pre + 'gdalwarp -t_srs ' + srs + ' \\\n  -te ' + e.map(f).join(' ') + ' \\\n  -ts ' + W + ' 0 -r bilinear \\\n  "' + dsn + '" view.tif';
+  const txt = pre + 'gdalwarp -t_srs "' + (/^VRT:/.test(srs) ? SRC.dsn : DISP.custom ? projString(srs) : srs) + '" \\\n  -te ' + e.map(f).join(' ') + ' \\\n  -ts ' + W + ' 0 -r bilinear \\\n  "' + dsn + '" view.tif';
   $('recipe').textContent = txt;
 }
 
 // ------------------------------------------------------------------ view & interaction
 function setDisplay(code) {
   if (code === 'source') DISP = Object.assign({ crs: SRC.crs }, nativeDisplay(SRC));
-  else DISP = Object.assign({ crs: code }, DISPLAYS[code]);
+  else if (DISPLAYS[code]) DISP = Object.assign({ crs: code }, DISPLAYS[code]);
+  else DISP = customDisplay(code);
   gratCache = null;
+}
+// Any PROJ string proj4js understands, or an EPSG code. The display grid's
+// extent comes from the lon/lat points that survive a round trip, capped at
+// a few Earth widths, joined with the source's outline.
+async function prepareCustom(def) {
+  def = def.trim();
+  if (/^EPSG:\d+$/i.test(def)) return ensureCrs(def.toUpperCase());
+  if (!/^\+proj=/.test(def)) throw new Error('give a PROJ string starting +proj= or an EPSG code');
+  // PROJ defaults false easting and northing to 0; proj4js needs them stated
+  if (!/\+x_0=/.test(def)) def += ' +x_0=0';
+  if (!/\+y_0=/.test(def)) def += ' +y_0=0';
+  let t;
+  try { t = proj4('EPSG:4326', def); t.forward([0.5, 0.5]); } catch (e) { throw new Error('proj4js does not support this projection: ' + (e.message || e)); }
+  CRSDEFS[def] = def;
+  return def;
+}
+function customDisplay(crs) {
+  const t = tf('EPSG:4326', crs);
+  const geo = isGeographic(crs);
+  const cap = geo ? 540 : 6e7;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const add = (p) => {
+    if (!p || Math.abs(p[0]) > cap || Math.abs(p[1]) > cap) return;
+    x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
+  };
+  for (let lat = -89; lat <= 89; lat += 2) for (let lon = -179; lon <= 179; lon += 2) {
+    const p = fwd(t, lon, lat);
+    if (!p) continue;
+    const q = fwd({ forward: t.inverse }, p[0], p[1]);
+    if (!q || Math.abs(q[1] - lat) > 1e-4 || Math.abs(((q[0] - lon + 540) % 360) - 180) > 1e-4) continue;
+    add(p);
+  }
+  if (SRC) {
+    const [a, b, c, d] = SRC.extent;
+    for (const p of densify([[a, b], [c, b], [c, d], [a, d], [a, b]], tf(SRC.crs, crs), 32)) add(p);
+  }
+  if (!(x1 > x0 && y1 > y0)) throw new Error('no part of the world is drawable in this CRS');
+  const w = x1 - x0, h = y1 - y0;
+  return { crs, label: crs, origin: [x0, y1], res0: Math.max(w, h) / TS, extent: [x0, y0, x1, y1], custom: true };
 }
 function fitSource() {
   const t = tf(SRC.crs, DISP.crs);
@@ -1630,6 +1683,8 @@ function fitSource() {
     x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]);
   }
   const ex = DISP.extent;
+  // a global source fits the whole drawable display
+  if (SRC.global) { x0 = ex[0]; x1 = ex[2]; y0 = ex[1]; y1 = ex[3]; }
   x0 = Math.max(x0, ex[0]); x1 = Math.min(x1, ex[2]); y0 = Math.max(y0, ex[1]); y1 = Math.min(y1, ex[3]);
   if (!(x1 > x0 && y1 > y0)) { x0 = ex[0]; x1 = ex[2]; y0 = ex[1]; y1 = ex[3]; }
   const [W, H] = panelSize(panels[0]);
@@ -1806,7 +1861,14 @@ async function useSource(spec, displayOverride) {
   footCache = null; outlineCache = null;
   const disp = displayOverride || spec.display || 'EPSG:3857';
   fillDisplaySelect(disp);
-  setDisplay($('display').value);
+  try {
+    const sel = $('display').value;
+    setDisplay(sel === 'custom' ? await prepareCustom(disp) : sel);
+  } catch (e) {
+    for (const P of panels) P.notes.add('display CRS: ' + (e.message || e));
+    fillDisplaySelect('EPSG:3857');
+    setDisplay('EPSG:3857');
+  }
   fitSource();
   updateBadges();
   logRows.length = 0;
@@ -1816,10 +1878,29 @@ async function useSource(spec, displayOverride) {
   scheduleDraw();
 }
 function fillDisplaySelect(value) {
-  const items = [{ value: 'source', label: 'Source CRS' + (SRC ? ' (' + SRC.crs + ')' : '') }];
+  const items = [{ value: 'source', label: 'Source CRS' + (SRC ? ' (' + shortCrs(SRC.crs) + ')' : '') }];
   for (const k of Object.keys(DISPLAYS)) items.push({ value: k, label: DISPLAYS[k].label });
+  items.push({ value: 'custom', label: 'PROJ string or EPSG code...' });
   fillSelect($('display'), items);
-  $('display').value = SRC && value === SRC.crs && !DISPLAYS[value] ? 'source' : (DISPLAYS[value] || value === 'source' ? value : 'EPSG:3857');
+  const custom = value && value !== 'source' && !DISPLAYS[value] && !(SRC && value === SRC.crs);
+  $('display').value = SRC && value === SRC.crs && !DISPLAYS[value] ? 'source' : custom ? 'custom' : (DISPLAYS[value] || value === 'source' ? value : 'EPSG:3857');
+  $('projIn').hidden = !custom;
+  if (custom) $('projIn').value = value;
+}
+function shortCrs(c) { return /^VRT:/.test(c) ? 'from WKT' : c.length > 40 ? c.slice(0, 37) + '...' : c; }
+async function applyDisplay(code) {
+  try {
+    if (code !== 'source' && !DISPLAYS[code]) code = await prepareCustom(code);
+    setDisplay(code);
+  } catch (e) {
+    for (const P of panels) { P.notes.add('display CRS: ' + (e.message || e)); }
+    scheduleHud();
+    return false;
+  }
+  for (const P of panels) resetPanel(P, true);
+  footCache = null; outlineCache = null;
+  fitSource(); updateBadges(); startView(); updateRecipe(); scheduleDraw();
+  return true;
 }
 
 function init() {
@@ -1841,11 +1922,12 @@ function init() {
   });
   $('url').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') $('load').click(); });
   $('display').addEventListener('change', () => {
-    setDisplay($('display').value);
-    for (const P of panels) resetPanel(P, true);
-    footCache = null; outlineCache = null;
-    fitSource(); updateBadges(); startView(); updateRecipe(); scheduleDraw();
+    const v = $('display').value;
+    $('projIn').hidden = v !== 'custom';
+    if (v === 'custom') { $('projIn').focus(); if ($('projIn').value.trim()) applyDisplay($('projIn').value); return; }
+    applyDisplay(v);
   });
+  $('projIn').addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && $('projIn').value.trim()) applyDisplay($('projIn').value); });
   for (const id of ['tMachinery', 'tFoot', 'tGrat']) $(id).addEventListener('change', scheduleDraw);
   $('reset').addEventListener('click', () => { for (const P of panels) resetPanel(P, false); startView(); scheduleDraw(); });
   document.querySelectorAll('.dtabs [role=tab]').forEach((b) => b.addEventListener('click', () => {

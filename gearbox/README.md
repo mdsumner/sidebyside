@@ -37,7 +37,9 @@ Query parameters:
   a tile template, one ending `.vrt` is a VRT, anything else is a COG. A tile
   template can carry its zoom range: `.../{z}/{x}/{y}.png#maxz=12`.
 - `display`: `EPSG:3857`, `EPSG:4326`, `EPSG:3031`, `EPSG:3413`,
-  `EPSG:8857` or `source`.
+  `EPSG:8857`, `source`, any other EPSG code, or a PROJ string such as
+  `+proj=laea +lat_0=-90 +lon_0=140 +datum=WGS84` (URL-encoded). The display
+  menu takes the same through "PROJ string or EPSG code...".
 
 Sources need CORS. The REMA levels at 2 m, 10 m and 32 m live on the data
 provider's bucket, the coarse levels in Git LFS beside the VRT.
@@ -117,7 +119,13 @@ top.
   `DstRect` only as a footprint. It ignores `SrcRect` scaling, per-source
   nodata and band mapping beyond the first band or the first three.
 - CRS definitions are built in for common codes and fetched from epsg.io for
-  others; proj4js does the transforms.
+  others; proj4js does the transforms. So a display CRS can be any PROJ
+  string in a family proj4js implements (stere, laea, aeqd, ortho, eqearth,
+  merc, tmerc/utm, lcc, aea, cea, eqc, moll, robin, sinu, omerc and a few
+  more), with no datum grids and no pipelines. Its drawable area is found by
+  round-tripping a lon/lat grid, so hemispheres and lobes need no bounds.
+- A COG must carry an EPSG code in its GeoKeys. A VRT can carry any WKT1
+  that proj4js parses.
 - Rendering is on the CPU into canvas tiles. That keeps the planner and the
   sampler in plain sight; it is not the fast path.
 
