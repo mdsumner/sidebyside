@@ -46,7 +46,7 @@ meta = {
     "ssh/.zarray": {"shape": list(ssh.shape), "chunks": list(chunks), "dtype": "<f4", "fill_value": 9.969209968386869e36,
                     "order": "C", "filters": [{"id": "shuffle", "elementsize": 4}, {"id": "zlib", "level": 1}],
                     "compressor": None, "dimension_separator": ".", "zarr_format": 2},
-    "ssh/.zattrs": {"_ARRAY_DIMENSIONS": ["time", "lat", "lon"], "_FillValue": "AAAAgB2vFcQ=", "valid_range": [-1000.0, 1000.0]},
+    "ssh/.zattrs": {"_ARRAY_DIMENSIONS": ["time", "lat", "lon"], "nan_attr": float("nan"), "_FillValue": "AAAAgB2vFcQ=", "valid_range": [-1000.0, 1000.0]},
     "lat/.zarray": {"shape": [300], "chunks": [300], "dtype": "<f8", "fill_value": None, "order": "C", "filters": None, "compressor": None, "zarr_format": 2},
     "lat/.zattrs": {"_ARRAY_DIMENSIONS": ["lat"]},
     "lon/.zarray": {"shape": [600], "chunks": [600], "dtype": "<f8", "fill_value": None, "order": "C", "filters": None, "compressor": None, "zarr_format": 2},

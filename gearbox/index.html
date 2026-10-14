@@ -1180,13 +1180,20 @@ function hyparquet() {
   if (!hmod) { hmod = import(HYPARQUET); hmod.catch(() => { hmod = null; }); }
   return hmod;
 }
+// Python's json writes bare NaN and Infinity; JSON does not allow them.
+// Zarr v2 spells them as strings, so quote them where a value is expected.
+function parseLooseJson(text) {
+  try { return JSON.parse(text); } catch (e) {
+    return JSON.parse(text.replace(/([:\[,]\s*)(-?Infinity|NaN)(?=\s*[,\]}])/g, '$1"$2"'));
+  }
+}
 function refsStore(base, ledger, limiter) {
   const enc = (o) => new TextEncoder().encode(JSON.stringify(o));
   let metaP = null;
   const meta = () => metaP || (metaP = (async () => {
     const r = await ledgerFetch(ledger, limiter, base + '/.zmetadata');
     if (!r.ok) throw new Error('HTTP ' + r.status + ' reading ' + base + '/.zmetadata');
-    return JSON.parse(new TextDecoder().decode(r.buf));
+    return parseLooseJson(new TextDecoder().decode(r.buf));
   })());
   const tables = new Map();
   const table = (v, f) => {
