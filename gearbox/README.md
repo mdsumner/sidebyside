@@ -14,6 +14,12 @@ source in the browser, with no server in between:
   multiscales (`multiscales.layout` with `spatial:transform`,
   `spatial:shape` and `proj:code`) or a CF-style variable with regular 1D
   coordinates. Blocks are chunks.
+- **virtual Zarr**: kerchunk references in Parquet (a `.zmetadata` with
+  `record_size`, then `<var>/refs.<n>.parq`). The store is metadata only;
+  each chunk is a byte range of an original netCDF/HDF5 file, read with
+  hyparquet and fetched only when a view needs it. The file server must
+  allow cross-origin range requests. A file server that throttles at a
+  dozen concurrent requests sees at most six per panel.
 
 It draws the same view twice, side by side. Both panels run the same code.
 They differ only in policy: the left panel uses deck.gl-raster's defaults,
@@ -37,7 +43,7 @@ python3 -m http.server 8000
 Query parameters:
 
 - `src`: a preset id (`rema`, `rema32`, `gebco`, `eox`, `nasa3031`, `s2`,
-  `mur`, `ecmwf`, `dep`, `dep4326`, `osm`, `esri`, `gibs3031`, `gibs3413`) or a URL. A URL
+  `mur`, `ecmwf`, `bran`, `dep`, `dep4326`, `osm`, `esri`, `gibs3031`, `gibs3413`) or a URL. A URL
   containing `{z}` is a tile template, one ending `.vrt` is a VRT, one with
   `.zarr` or a `#var=` fragment is Zarr, anything else is a COG. A tile
   template can carry its zoom range: `.../{z}/{x}/{y}.png#maxz=12`. A Zarr
@@ -128,9 +134,11 @@ python3 test/drive.py http://127.0.0.1:8765/index.html /tmp/shots \
 
 `drive.py` routes the CDN scripts to local npm copies; edit `LIB` at its
 top. For the Zarr fixtures (`test/make_zarr_fixtures.py`: a GeoZarr
-multiscale group, a packed CF v2 store, a sharded v3 store) it also routes
-zarrita's `+esm` URL to a local single-file bundle, made with
-`npx esbuild entry.js --bundle --format=esm` over `export * from "zarrita"`.
+multiscale group, a packed CF v2 store, a sharded v3 store;
+`test/make_refs_fixture.py`: a kerchunk-Parquet virtual Zarr over a
+netCDF-like blob, shuffle and zlib) it also routes the `+esm`
+URLs of zarrita and hyparquet to local single-file bundles, each made with
+`npx esbuild entry.js --bundle --format=esm` over `export * from "<package>"`.
 
 ## Limits
 

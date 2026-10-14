@@ -387,6 +387,7 @@ const PRESETS = [
   { group: 'Antimeridian', id: 'dep', label: 'Pacific Landsat GeoMAD red, 12 COGs across 180 (VRT, EPSG:3832)', url: new URL('data/dep_ls_geomad_red_antimeridian.vrt', location.href).href, display: 'source', style: { palette: 'grey', min: 6000, max: 12000 }, note: 'Twelve 96 km tiles in Pacific Mercator, three of them across the antimeridian. Seamless in their own CRS and in the Pacific-centred displays; switch to Web Mercator or lon/lat to put the seam through them.' },
   { group: 'Antimeridian', id: 'dep4326', label: 'Same mosaic, drawn on lon/lat (the seam splits it)', url: new URL('data/dep_ls_geomad_red_antimeridian.vrt', location.href).href, display: 'EPSG:4326', style: { palette: 'grey', min: 6000, max: 12000 } },
   { group: 'Zarr', id: 'mur', label: 'GHRSST MUR SST 0.01 deg (Zarr v2, one level)', url: 'https://mur-sst.s3.us-west-2.amazonaws.com/zarr-v1#var=analysed_sst&sel=time:-1', display: 'EPSG:3857', fit: [143, -45, 150, -39], style: { palette: 'viridis', min: 281, max: 293 }, note: 'One big array with no pyramid: windowed reads work up close, and the page says no when zoomed out.' },
+  { group: 'Zarr', id: 'bran', label: 'BRAN2023 sea surface height, virtual Zarr over THREDDS netCDF', url: 'https://raw.githubusercontent.com/mdsumner/virtualized/main/remote/ocean_eta_t_2023.parq#var=eta_t&sel=Time:-1&crs=EPSG:4326', display: 'EPSG:3857', fit: [140, -46, 156, -36], style: { palette: 'viridis', min: -1, max: 1 }, note: 'Kerchunk Parquet references: the Zarr is metadata only, and each chunk is a byte range of a daily netCDF file on a THREDDS file server. The server must allow cross-origin range requests.' },
   { group: 'Zarr', id: 'ecmwf', label: 'ECMWF IFS ENS 2 m temperature (Zarr v3, dynamical.org)', url: S3COOP + '/dynamical/ecmwf-ifs-ens-forecast-15-day-0-25-degree/v0.1.0.zarr#var=temperature_2m&sel=init_time:-1', display: 'EPSG:8857', style: { palette: 'viridis', min: -40, max: 40 } },
   { group: 'Tile servers', id: 'osm', label: 'OpenStreetMap (XYZ, EPSG:3857)', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', display: 'EPSG:3857', tiles: { crs: 'EPSG:3857', maxZ: 19 }, attribution: '(c) OpenStreetMap contributors' },
   { group: 'Tile servers', id: 'esri', label: 'Esri World Imagery (XYZ, EPSG:3857)', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', display: 'EPSG:3031', tiles: { crs: 'EPSG:3857', maxZ: 19 }, attribution: 'Esri, Maxar, Earthstar Geographics' },
@@ -697,7 +698,7 @@ async function loadSource(spec) {
     }
     src.template = url;
     src.dsn = t.crs === 'EPSG:3857' && t.size === 256 ? url.replace('{z}', '${z}').replace('{x}', '${x}').replace('{y}', '${y}') : url;
-  } else if (/\.zarr(\/|#|$)|#zarr|[?&#]var=/i.test(url)) {
+  } else if (/\.zarr(\/|#|$)|\.parq(#|$)|#zarr|[?&#]var=/i.test(url)) {
     const Z = await openZarr(url, setupLedger, null);
     await ensureCrs(Z.crs);
     src.kind = 'zarr';
@@ -707,7 +708,7 @@ async function loadSource(spec) {
     src.rgba = false;
     src.res = Z.levels[0].res;
     src.levels = Z.levels.map((L) => ({ name: fmtRes(L.res, isGeographic(Z.crs)), res: L.res }));
-    src.dsn = 'ZARR:"/vsicurl/' + Z.opts.base + '"' + (Z.levels.length === 1 && Z.levels[0].path && Z.levels[0].path !== '/' ? ':' + Z.levels[0].path : '');
+    src.dsn = 'ZARR:"' + (Z.virtual ? '/vsikerchunk_parquet_ref/{/vsicurl/' + Z.opts.base + '}' : '/vsicurl/' + Z.opts.base) + '"' + (Z.levels.length === 1 && Z.levels[0].path && Z.levels[0].path !== '/' ? ':' + Z.levels[0].path : '');
   } else if (/\.vrt(\?|$)/i.test(url)) {
     const r = await ledgerFetch(setupLedger, null, url);
     if (!r.ok) throw new Error('HTTP ' + r.status + ' reading ' + url);
@@ -1131,12 +1132,10 @@ function zarrita() {
 }
 // Encoded chunks are cached per panel (up to 256 MB), and a request in
 // flight is shared, so screen tiles that fall in one chunk fetch it once.
-function zarrStore(base, ledger, limiter) {
-  const u = (key) => base + (key.startsWith('/') ? key : '/' + key);
-  const miss = (r) => r.status === 404 || r.status === 403;
+function byteCache() {
   const cache = new Map();
   let bytes = 0;
-  const cached = (k, fn) => {
+  return (k, fn) => {
     let p = cache.get(k);
     if (p) { cache.delete(k); cache.set(k, p); return p; }
     p = fn().then((v) => {
@@ -1151,6 +1150,11 @@ function zarrStore(base, ledger, limiter) {
     cache.set(k, p);
     return p;
   };
+}
+function zarrStore(base, ledger, limiter) {
+  const u = (key) => base + (key.startsWith('/') ? key : '/' + key);
+  const miss = (r) => r.status === 404 || r.status === 403;
+  const cached = byteCache();
   const go = async (key, init) => {
     const r = await ledgerFetch(ledger, limiter, u(key), init);
     if (miss(r)) return undefined;
@@ -1164,6 +1168,78 @@ function zarrStore(base, ledger, limiter) {
       return cached(key + '|' + h, () => go(key, { headers: { Range: h } }));
     }
   };
+}
+// A virtual Zarr: kerchunk references in Parquet (a .zmetadata with
+// record_size, then <var>/refs.<n>.parq with path, offset, size, raw per
+// chunk). Metadata comes from the references; chunk bytes are ranges of the
+// original files (netCDF/HDF5 on a server), fetched only when a view needs
+// them. The reference tables are read with hyparquet.
+const HYPARQUET = 'https://cdn.jsdelivr.net/npm/hyparquet@1.31.4/+esm';
+let hmod = null;
+function hyparquet() {
+  if (!hmod) { hmod = import(HYPARQUET); hmod.catch(() => { hmod = null; }); }
+  return hmod;
+}
+function refsStore(base, ledger, limiter) {
+  const enc = (o) => new TextEncoder().encode(JSON.stringify(o));
+  let metaP = null;
+  const meta = () => metaP || (metaP = (async () => {
+    const r = await ledgerFetch(ledger, limiter, base + '/.zmetadata');
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' reading ' + base + '/.zmetadata');
+    return JSON.parse(new TextDecoder().decode(r.buf));
+  })());
+  const tables = new Map();
+  const table = (v, f) => {
+    const k = v + '/' + f;
+    if (!tables.has(k)) {
+      const p = (async () => {
+        const r = await ledgerFetch(ledger, limiter, base + '/' + v + '/refs.' + f + '.parq');
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' reading references for ' + v);
+        const h = await hyparquet();
+        // utf8: false keeps the raw column as bytes; the path column is then decoded here
+        const rows = await h.parquetReadObjects({ file: r.buf, columns: ['path', 'offset', 'size', 'raw'], utf8: false });
+        const td = new TextDecoder();
+        for (const row of rows) if (row.path && typeof row.path !== 'string') row.path = td.decode(row.path);
+        return rows;
+      })();
+      p.catch(() => tables.delete(k));
+      tables.set(k, p);
+    }
+    return tables.get(k);
+  };
+  const cached = byteCache();
+  const store = {
+    refs: true,
+    async get(key) {
+      const k = key.replace(/^\//, '');
+      const m = await meta();
+      if (k === '.zmetadata') return enc({ zarr_consolidated_format: 1, metadata: m.metadata });
+      if (m.metadata[k] !== undefined) return enc(m.metadata[k]);
+      if (/(^|\/)(\.zarray|\.zattrs|\.zgroup|zarr\.json)$/.test(k)) return undefined;
+      const i = k.lastIndexOf('/');
+      const v = i < 0 ? '' : k.slice(0, i), ck = k.slice(i + 1);
+      const za = m.metadata[(v ? v + '/' : '') + '.zarray'];
+      if (!za) return undefined;
+      const idx = ck.split(za.dimension_separator || '.').map(Number);
+      const grid = za.shape.map((n, d) => Math.ceil(n / za.chunks[d]));
+      let lin = 0;
+      for (let d = 0; d < grid.length; d++) lin = lin * grid[d] + (idx[d] || 0);
+      const rs = m.record_size || 100000;
+      const rows = await table(v, Math.floor(lin / rs));
+      const row = rows[lin % rs];
+      if (!row) return undefined;
+      if (row.raw && row.raw.length) return typeof row.raw === 'string' ? new TextEncoder().encode(row.raw) : new Uint8Array(row.raw);
+      if (!row.path) return undefined;
+      const off = Number(row.offset), size = Number(row.size);
+      const h = 'bytes=' + off + '-' + (off + size - 1);
+      return cached(row.path + '|' + h, async () => {
+        const r = await ledgerFetch(ledger, limiter, row.path, { headers: { Range: h } });
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' for a chunk of ' + shortName(row.path));
+        return new Uint8Array(r.buf);
+      });
+    }
+  };
+  return store;
 }
 function parseZarrUrl(url) {
   const i = url.indexOf('#');
@@ -1235,7 +1311,8 @@ function wktCrs(wkt) {
 async function openZarr(url, ledger, limiter) {
   const z = await zarrita();
   const opts = parseZarrUrl(url);
-  const store = await z.withMaybeConsolidatedMetadata(zarrStore(opts.base, ledger, limiter));
+  const raw = /\.parq$/i.test(opts.base) ? refsStore(opts.base, ledger, limiter) : zarrStore(opts.base, ledger, limiter);
+  const store = await z.withMaybeConsolidatedMetadata(raw);
   const root = z.root(store);
   const node = await z.open(root);
   const listing = store.contents ? store.contents() : [];
@@ -1284,12 +1361,20 @@ async function openZarr(url, ledger, limiter) {
   levels.sort((p, q) => p.res - q.res);
   crs = await crsOf(z, root, opts, attrsList, levels[0].dims);
   const A = levels[0].arr.attrs || {};
-  const fill = [A._FillValue, A.missing_value, levels[0].arr.fillValue].filter((v) => v !== undefined && v !== null);
+  const decodeFill = (v) => {
+    if (typeof v !== 'string' || !/^[A-Za-z0-9+/]+=*$/.test(v)) return v;
+    try {
+      const b = Uint8Array.from(atob(v), (c) => c.charCodeAt(0));
+      return b.length === 4 ? new DataView(b.buffer).getFloat32(0, true) : b.length === 8 ? new DataView(b.buffer).getFloat64(0, true) : NaN;
+    } catch (e) { return NaN; }
+  };
+  const fill = [decodeFill(A._FillValue), A.missing_value, levels[0].arr.fillValue].filter((v) => v !== undefined && v !== null);
+  const vr = Array.isArray(A.valid_range) ? A.valid_range.map(Number) : null;
   return {
-    z, levels, crs, opts,
+    z, levels, crs, opts, virtual: !!raw.refs,
     scale: A.scale_factor !== undefined ? +A.scale_factor : 1,
     offset: A.add_offset !== undefined ? +A.add_offset : 0,
-    fill: fill.map(Number)
+    fill: fill.map(Number), validRange: vr
   };
 }
 function zarrExtent(L) {
@@ -1332,7 +1417,7 @@ function zarrRaster(Z, L, cap) {
       const data = res.data, fill = Z.fill, sc = Z.scale, of = Z.offset;
       for (let r = 0; r < hh; r++) for (let c = 0; c < ww; c++) {
         let v = Number(data[yFirst ? r * s0 + c * s1 : c * s0 + r * s1]);
-        if (v !== v || fill.includes(v)) { out[r * ww + c] = NaN; continue; }
+        if (v !== v || fill.includes(v) || (Z.validRange && (v < Z.validRange[0] || v > Z.validRange[1]))) { out[r * ww + c] = NaN; continue; }
         out[r * ww + c] = v * sc + of;
       }
       return { data: out, nb: 1, blocks: ny * nx };
@@ -2197,7 +2282,9 @@ async function useSource(spec, displayOverride) {
   try {
     s = await loadSource(spec);
   } catch (e) {
-    for (const P of panels) { P.hud.innerHTML = '<div class="note bad">' + esc(e.message || e) + '</div>'; P.hud._last = null; }
+    console.error(e);
+    for (const P of panels) { P.notes.clear(); P.notes.add('could not open the source: ' + (e.message || e)); }
+    updateHuds();
     return;
   }
   if (!s) return;

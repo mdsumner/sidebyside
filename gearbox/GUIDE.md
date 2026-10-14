@@ -255,6 +255,15 @@ close and has no answer zoomed out; the page says so rather than reading
 gigabytes. That is section 3's argument again: a pyramid is a data product,
 and a reader should make its absence visible.
 
+A virtual Zarr is the same again one step further down. Kerchunk references
+in Parquet turn a THREDDS-hosted archive of daily netCDF files into one
+store: the metadata and the chunk index are a few megabytes in a git
+repository, and each chunk is a byte range of the original file. Gearbox
+reads them with a 70-line store over hyparquet and zarrita. The open
+question for a browser is not the format but the host: the file server has
+to allow cross-origin range requests, and a server that throttles at a
+dozen concurrent requests needs a reader that queues politely.
+
 ## 8. Count the bytes
 
 Every number in this guide comes from Gearbox's per-panel ledger: a
