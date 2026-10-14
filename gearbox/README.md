@@ -112,6 +112,17 @@ policy, so changing it keeps the preset; it rides along in view links.
   answered, how many files and blocks it read, and how many lattice cells
   needed exact transforms.
 - **file footprints**: the VRT's source files, in the display CRS.
+- **coastline**: Natural Earth 1:50m (public domain), kept in `data/`,
+  projected into the display CRS.
+- **sea ice edge**: the latest daily extent from the NSIDC Sea Ice Index
+  (G02135 v4, 25 km, 15% concentration), both hemispheres, read as GeoTIFF
+  from `noaadata.apps.nsidc.org` and contoured in the browser in its own
+  polar stereographic grid, with land counted as ice so only the edge
+  against open ocean is drawn. The date shows beside the checkbox. The file
+  host must allow cross-origin requests; `?seaice=` can point at another
+  copy, with `{hemi}` `{H}` `{yyyy}` `{mm}` `{Mon}` `{dd}` in the template.
+
+Overlays are context: their bytes are not counted in either panel's ledger.
 - **View log**: per settled view and panel, the levels drawn (with tile
   counts), new headers opened, requests, bytes, time to settle, and
   projection calls.

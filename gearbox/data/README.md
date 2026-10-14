@@ -12,3 +12,7 @@ grid was written from the items' `proj:transform` (checked against 064/020,
 Check it with GDAL:
 
     gdalinfo /vsicurl/https://mdsumner.github.io/sidebyside/gearbox/data/dep_ls_geomad_red_antimeridian.vrt
+
+`ne_50m_coastline.json`: the Natural Earth 1:50m coastline (public domain,
+naturalearthdata.com, from nvkelso/natural-earth-vector), as flat lon/lat
+arrays per line with vertices rounded to 0.001 degree.
