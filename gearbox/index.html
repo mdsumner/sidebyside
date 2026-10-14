@@ -103,6 +103,7 @@ select, input[type=text] {
 .stage { position: relative; flex: 1; min-height: 0; overflow: hidden; touch-action: none; cursor: grab; }
 .stage.drag { cursor: grabbing; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+body.dropping .panels { outline: 3px dashed var(--deck); outline-offset: -6px; }
 .hud {
   position: absolute; left: 8px; bottom: 8px; max-width: calc(100% - 16px);
   background: color-mix(in srgb, var(--surface) 90%, transparent);
@@ -186,6 +187,7 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
     <label><input type="checkbox" id="tMachinery" checked> machinery</label>
     <label><input type="checkbox" id="tFoot"> file footprints</label>
     <label><input type="checkbox" id="tGrat" checked> graticule</label>
+    <label title="Keep the active display CRS when the source changes; untick to let each preset choose"><input type="checkbox" id="tKeepCrs" checked> keep display CRS</label>
     <label><input type="checkbox" id="tCoast" checked> coastline</label>
     <label title="NSIDC Sea Ice Index daily concentration, contoured at 15%, latest day available"><input type="checkbox" id="tIce"> <span id="iceLabel">sea ice edge</span></label>
   </div>
@@ -2602,7 +2604,9 @@ async function useSource(spec, displayOverride) {
   if (SRC.style.min === null && !SRC.rgba) { SRC.style.auto = true; SRC.style.min = 0; SRC.style.max = 1; SRC.style.palette = SRC.style.palette === 'grey' ? 'viridis' : SRC.style.palette; LUT = lut(SRC.style.palette); }
   for (const P of panels) resetPanel(P, false);
   footCache = null; outlineCache = null;
-  const disp = displayOverride || spec.display || 'EPSG:3857';
+  // keep the active display unless told otherwise (a link or the first load)
+  const current = DISP ? (DISP.native ? 'source' : DISP.crs) : null;
+  const disp = displayOverride || (current && $('tKeepCrs').checked ? current : null) || spec.display || 'EPSG:3857';
   fillDisplaySelect(disp);
   try {
     const sel = $('display').value;
@@ -2668,15 +2672,30 @@ function init() {
   $('openFile').addEventListener('click', () => $('fileIn').click());
   $('fileIn').addEventListener('change', async () => {
     const f = $('fileIn').files && $('fileIn').files[0];
-    if (!f) return;
+    $('fileIn').value = '';
+    if (f) openLocalFile(f);
+  });
+  // Drop a file anywhere on the page
+  let dragDepth = 0;
+  const hasFiles = (ev) => ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files');
+  document.addEventListener('dragenter', (ev) => { if (!hasFiles(ev)) return; dragDepth++; document.body.classList.add('dropping'); });
+  document.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) document.body.classList.remove('dropping'); });
+  document.addEventListener('dragover', (ev) => { if (hasFiles(ev)) { ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; } });
+  document.addEventListener('drop', (ev) => {
+    if (!hasFiles(ev)) return;
+    ev.preventDefault();
+    dragDepth = 0; document.body.classList.remove('dropping');
+    const f = ev.dataTransfer.files && ev.dataTransfer.files[0];
+    if (f) openLocalFile(f);
+  });
+  async function openLocalFile(f) {
     const head = await f.slice(0, 64).text().catch(() => '');
     const isVrt = /\.vrt$/i.test(f.name) || /^\s*<VRTDataset/.test(head);
     const key = 'file:' + f.name + (isVrt ? '#.vrt' : '');
     FILES.set(key, f);
-    $('fileIn').value = '';
     await useSource({ url: key, display: 'source' });
     $('url').value = f.name + ' (local)';
-  });
+  }
   $('display').addEventListener('change', () => {
     const v = $('display').value;
     $('projIn').hidden = v !== 'custom';
