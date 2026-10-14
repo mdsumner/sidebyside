@@ -282,5 +282,5 @@ choice, not a property of the data.
 `nasa3031`, `s2` (COGs), `rema32` (a VRT with no overviews), `osm`, `esri`,
 `gibs3031`, `gibs3413` (tile servers). `display=` takes `EPSG:3857`,
 `EPSG:4326`, `EPSG:3031`, `EPSG:3413`, `EPSG:8857` or `source`. The panel
-presets are "deck.gl-raster defaults", "recipe reader", "GDAL warper", and
+presets are "deck.gl-raster defaults", "recipe reader", "gdalwarp rules", and
 every knob can be changed in place.

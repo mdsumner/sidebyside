@@ -65,7 +65,7 @@ the level that answered in both panels.
 
 ## The policy knobs
 
-| Knob | deck.gl-raster defaults | recipe reader | GDAL warper |
+| Knob | deck.gl-raster defaults | recipe reader | gdalwarp rules |
 |---|---|---|---|
 | level: source px <= | 1 device px | 1.5 CSS px | 1 CSS px |
 | mosaic pyramid | per-file (MosaicLayer) | VRT overviews | VRT overviews |
@@ -74,6 +74,12 @@ the level that answered in both panels.
 
 All three load from the centre outwards with six concurrent requests per
 host.
+
+"gdalwarp rules" copies gdalwarp's choices, not its process. gdalwarp picks
+one overview for the whole output from the ratio across the window,
+approximates the transform along scanlines, and resamples nearest by
+default. Gearbox picks a level per screen tile, approximates on a lattice,
+and uses bilinear when upsampling, for every preset.
 
 ## What is on screen
 

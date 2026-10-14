@@ -94,6 +94,9 @@ select, input[type=text] {
 .phead select { font-size: 12px; padding: 2px 4px; }
 .knobs { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; color: var(--muted); }
 .knobs label { display: flex; gap: 4px; align-items: center; }
+.pnote { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 12px; max-width: 90ch; }
+.dtabs a.doclink { color: var(--muted); font-size: 12.5px; padding: 7px 8px; text-decoration: none; }
+.dtabs a.doclink:hover { color: var(--ink); text-decoration: underline; }
 .badge { font: 500 11px var(--f-mono); padding: 1px 6px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
 .badge.warn { background: transparent; border: 1px solid var(--bad); color: var(--bad); }
 .stage { position: relative; flex: 1; min-height: 0; overflow: hidden; touch-action: none; cursor: grab; }
@@ -149,7 +152,7 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
 
 @media (max-width: 760px) {
   .panels { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-  .brand span, .knobs, .badge, .hud .note, .hud button, .toggles { display: none !important; }
+  .brand span, .knobs, .pnote, .dtabs a.doclink, .badge, .hud .note, .hud button, .toggles { display: none !important; }
   .bar { gap: 6px 10px; }
   #url { width: 100%; }
   .drawer { max-height: 32vh; }
@@ -187,6 +190,7 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
       <select id="presetA" aria-label="Policy preset for the left panel"></select>
       <span class="badge" id="badgeA" hidden></span>
       <div class="knobs" id="knobsA"></div>
+      <p class="pnote" id="noteA"></p>
     </div>
     <div class="stage" id="stageA"><canvas id="canvasA"></canvas><div class="readout" id="readA" hidden></div><div class="hud" id="hudA"></div></div>
   </section>
@@ -196,6 +200,7 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
       <select id="presetB" aria-label="Policy preset for the right panel"></select>
       <span class="badge" id="badgeB" hidden></span>
       <div class="knobs" id="knobsB"></div>
+      <p class="pnote" id="noteB"></p>
     </div>
     <div class="stage" id="stageB"><canvas id="canvasB"></canvas><div class="readout" id="readB" hidden></div><div class="hud" id="hudB"></div></div>
   </section>
@@ -207,6 +212,8 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
     <button role="tab" aria-selected="false" data-tab="recipe" id="tabRecipe">This view as a recipe</button>
     <button role="tab" aria-selected="false" data-tab="about" id="tabAbout">What differs</button>
     <span class="spacer"></span>
+    <a class="doclink" href="https://github.com/mdsumner/sidebyside/blob/main/gearbox/GUIDE.md" target="_blank" rel="noopener">Guide</a>
+    <a class="doclink" href="https://github.com/mdsumner/sidebyside/blob/main/gearbox/README.md" target="_blank" rel="noopener">README</a>
     <button id="reset" class="btn" title="Clear both panels' caches and ledgers">Cold start</button>
     <button id="drawerToggle" class="btn" aria-expanded="true" title="Hide the drawer">Hide</button>
   </div>
@@ -237,6 +244,8 @@ pre.recipe { font: 12px/1.5 var(--f-mono); background: var(--bg); border: 1px so
         <p><b>Mesh error.</b> Screen tiles are warped through a coarse grid of exact transforms; cells whose interpolation error exceeds 0.125 pixels are transformed exactly. deck.gl-raster and gdalwarp (<code>-et</code>) share that default, both in source pixels. Output pixels is the alternative deck.gl-raster added experimentally in #711. Source pixels over-refine when the level read is much finer than the screen. The count of exact transforms is in the log.</p>
         <h3>What is the same</h3>
         <p>Both read from the source in its own CRS, both draw through the same display CRS, both load from the centre outwards with six requests per host, both count every byte.</p>
+        <h3>More</h3>
+        <p>The <a href="https://github.com/mdsumner/sidebyside/blob/main/gearbox/GUIDE.md" target="_blank" rel="noopener">guide</a> sets out what these differences suggest for browser raster libraries, with numbers from test runs. The <a href="https://github.com/mdsumner/sidebyside/blob/main/gearbox/README.md" target="_blank" rel="noopener">README</a> covers the pipeline, query parameters and tests.</p>
       </div>
     </div>
   </div>
@@ -366,9 +375,9 @@ const PRESETS = [
 // ------------------------------------------------------------------ policies
 // Every difference between the panels is one of these knobs.
 const POLICIES = {
-  deck: { label: 'deck.gl-raster defaults', lodFactor: 1, lodBasis: 'device', mosaic: 'per-file', ovrExtent: 'own', meshError: 'source' },
-  recipe: { label: 'recipe reader', lodFactor: 1.5, lodBasis: 'css', mosaic: 'recipe', ovrExtent: 'own', meshError: 'output' },
-  gdal: { label: 'GDAL warper', lodFactor: 1, lodBasis: 'css', mosaic: 'recipe', ovrExtent: 'base', meshError: 'source' }
+  deck: { label: 'deck.gl-raster defaults', note: "deck.gl-raster's defaults: the level one device pixel needs, each mosaic file's own overviews, mesh error in source pixels. An emulation in this reader, not deck.gl.", lodFactor: 1, lodBasis: 'device', mosaic: 'per-file', ovrExtent: 'own', meshError: 'source' },
+  recipe: { label: 'recipe reader', note: "The REMA explorer's rules: the coarsest level within 1.5 screen pixels, whole-mosaic VRT overviews, each file's own georeferencing.", lodFactor: 1.5, lodBasis: 'css', mosaic: 'recipe', ovrExtent: 'own', meshError: 'output' },
+  gdal: { label: 'gdalwarp rules', note: "gdalwarp's rules (-ovr AUTO, -et 0.125, overviews assumed to cover the base extent), applied per screen tile. gdalwarp itself picks one level for the whole output, approximates along scanlines and resamples nearest by default.", lodFactor: 1, lodBasis: 'css', mosaic: 'recipe', ovrExtent: 'base', meshError: 'source' }
 };
 const KNOBS = [
   { key: 'lodFactor', label: 'level: source px <=', options: [[1, '1'], [1.5, '1.5'], [2, '2']] },
@@ -1749,7 +1758,16 @@ function renderKnobs(P) {
   }
   updateBadges();
 }
+function updateNotes() {
+  for (const P of panels) {
+    const pol = POLICIES[P.presetId];
+    const t = pol ? pol.note : 'Your own mix of the knobs: changed from a preset, applied to this panel only.';
+    $('note' + P.k.toUpperCase()).textContent = t;
+    $('preset' + P.k.toUpperCase()).title = t;
+  }
+}
 function updateBadges() {
+  updateNotes();
   for (const P of panels) {
     const b = $('badge' + P.k.toUpperCase());
     if (P.presetId === 'deck' && DISP && DISP.crs !== 'EPSG:3857' && !(DISP.crs === 'EPSG:4326')) {
@@ -1806,7 +1824,7 @@ function fillDisplaySelect(value) {
 
 function init() {
   panels.push(makePanel('a', 'deck'), makePanel('b', 'recipe'));
-  const pitems = [{ value: 'deck', label: 'deck.gl-raster defaults' }, { value: 'recipe', label: 'recipe reader' }, { value: 'gdal', label: 'GDAL warper' }, { value: 'custom', label: 'custom' }];
+  const pitems = [{ value: 'deck', label: 'deck.gl-raster defaults' }, { value: 'recipe', label: 'recipe reader' }, { value: 'gdal', label: 'gdalwarp rules' }, { value: 'custom', label: 'custom' }];
   fillSelect($('presetA'), pitems, 'deck');
   fillSelect($('presetB'), pitems, 'recipe');
   $('presetA').addEventListener('change', () => setPolicyPreset(panels[0], $('presetA').value));
