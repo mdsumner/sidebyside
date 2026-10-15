@@ -37,6 +37,7 @@ lat = np.arange(-89.875, 90, 0.25)
 lon = np.arange(-179.875, 180, 0.25)
 g2 = zarr.open_group(os.path.join(out, "cf_sst.zarr"), mode="w", zarr_format=2)
 t = g2.create_array("time", shape=(2,), dtype="int32"); t[:] = [0, 1]; t.attrs["_ARRAY_DIMENSIONS"] = ["time"]
+t.attrs.update({"units": "days since 2026-10-13", "calendar": "standard"})
 la = g2.create_array("lat", shape=lat.shape, dtype="float64"); la[:] = lat; la.attrs["_ARRAY_DIMENSIONS"] = ["lat"]
 lo = g2.create_array("lon", shape=lon.shape, dtype="float64"); lo[:] = lon; lo.attrs["_ARRAY_DIMENSIONS"] = ["lon"]
 LON, LAT = np.meshgrid(lon, lat)
@@ -44,7 +45,7 @@ sst = 28 * np.cos(np.radians(LAT)) - 1.8 + 2 * np.sin(np.radians(LON * 3))
 packed = np.round((sst - 20) / 0.01).astype("int16")
 packed[(LAT > 60) & (LON > 0)] = -32768  # a land-like hole
 v = g2.create_array("analysed_sst", shape=(2,) + sst.shape, chunks=(1, 240, 480), dtype="int16", fill_value=-32768)
-v[0] = packed; v[1] = packed
+v[0] = packed; v[1] = packed + 100  # the latest step is 1 degree warmer
 v.attrs.update({"_ARRAY_DIMENSIONS": ["time", "lat", "lon"], "scale_factor": 0.01, "add_offset": 20.0, "_FillValue": -32768})
 zarr.consolidate_metadata(os.path.join(out, "cf_sst.zarr"))
 
@@ -54,6 +55,10 @@ lat3 = np.arange(89.75, -90, -0.5)
 lon3 = np.arange(-180, 180, 0.5)
 a = g3.create_array("latitude", shape=lat3.shape, dtype="float64", dimension_names=["latitude"]); a[:] = lat3
 a = g3.create_array("longitude", shape=lon3.shape, dtype="float64", dimension_names=["longitude"]); a[:] = lon3
+a = g3.create_array("init_time", shape=(3,), dtype="int64", dimension_names=["init_time"])
+a[:] = [1791158400 + 86400 * i for i in range(3)]  # 2026-10-05, 06, 07 00 UTC
+a.attrs.update({"units": "seconds since 1970-01-01", "calendar": "proleptic_gregorian"})
+a = g3.create_array("ensemble_member", shape=(2,), dtype="int16", dimension_names=["ensemble_member"]); a[:] = [0, 1]
 L3, A3 = np.meshgrid(lon3, lat3)
 temp = (30 * np.cos(np.radians(A3)) - 10 + 5 * np.sin(np.radians(L3 * 2))).astype("float32")
 a = g3.create_array("temperature_2m", shape=(3, 2) + temp.shape, chunks=(1, 1, 120, 180), shards=(1, 1, 360, 720),

@@ -112,6 +112,7 @@ body.dropping .panels { outline: 3px dashed var(--deck); outline-offset: -6px; }
   pointer-events: auto;
 }
 .hud .row { display: flex; gap: 12px; flex-wrap: wrap; }
+.hud .slice { font-family: var(--f-mono, monospace); font-size: 11px; color: var(--muted); margin-top: 3px; }
 .hud b { font-weight: 500; color: var(--accent); }
 .hud .note { font-family: var(--f-body); color: var(--muted); max-width: 44ch; margin-top: 3px; }
 .hud .note.bad { color: var(--bad); }
@@ -398,9 +399,9 @@ const PRESETS = [
   { group: 'Scheme only (no data)', id: 'grid-s2', label: 'Sentinel-2 10 m tile, 1024 px blocks (UTM 55S)', url: 'grid:crs=EPSG:32755&extent=499980,5090200,609780,5200000&shape=10980,10980&block=1024', display: 'EPSG:3857' },
   { group: 'Antimeridian', id: 'dep', label: 'Pacific Landsat GeoMAD red, 12 COGs across 180 (VRT, EPSG:3832)', url: new URL('data/dep_ls_geomad_red_antimeridian.vrt', location.href).href, display: 'source', style: { palette: 'grey', min: 6000, max: 12000 }, note: 'Twelve 96 km tiles in Pacific Mercator, three of them across the antimeridian. Seamless in their own CRS and in the Pacific-centred displays; switch to Web Mercator or lon/lat to put the seam through them.' },
   { group: 'Antimeridian', id: 'dep4326', label: 'Same mosaic, drawn on lon/lat (the seam splits it)', url: new URL('data/dep_ls_geomad_red_antimeridian.vrt', location.href).href, display: 'EPSG:4326', style: { palette: 'grey', min: 6000, max: 12000 } },
-  { group: 'Zarr', id: 'mur', label: 'GHRSST MUR SST 0.01 deg (Zarr v2, one level)', url: 'https://mur-sst.s3.us-west-2.amazonaws.com/zarr-v1#var=analysed_sst&sel=time:-1', display: 'EPSG:3857', fit: [143, -45, 150, -39], style: { palette: 'viridis', min: 281, max: 293 }, note: 'One big array with no pyramid: windowed reads work up close, and the page says no when zoomed out.' },
-  { group: 'Zarr', id: 'bran', label: 'BRAN2023 sea surface height, virtual Zarr over THREDDS netCDF', url: 'https://raw.githubusercontent.com/mdsumner/virtualized/main/remote/ocean_eta_t_2023.parq#var=eta_t&sel=Time:-1&crs=EPSG:4326', display: 'EPSG:3857', fit: [140, -46, 156, -36], style: { palette: 'viridis', min: -1, max: 1 }, note: 'Kerchunk Parquet references: the Zarr is metadata only, and each chunk is a byte range of a daily netCDF file on a THREDDS file server. The server must allow cross-origin range requests.' },
-  { group: 'Zarr', id: 'ecmwf', label: 'ECMWF IFS ENS 2 m temperature (Zarr v3, dynamical.org)', url: S3COOP + '/dynamical/ecmwf-ifs-ens-forecast-15-day-0-25-degree/v0.1.0.zarr#var=temperature_2m&sel=init_time:-1', display: 'EPSG:8857', style: { palette: 'viridis', min: -40, max: 40 } },
+  { group: 'Zarr', id: 'mur', label: 'GHRSST MUR SST 0.01 deg (Zarr v2, one level)', url: 'https://mur-sst.s3.us-west-2.amazonaws.com/zarr-v1#var=analysed_sst', display: 'EPSG:3857', fit: [143, -45, 150, -39], style: { palette: 'viridis', min: 281, max: 293 }, note: 'One big array with no pyramid: windowed reads work up close, and the page says no when zoomed out.' },
+  { group: 'Zarr', id: 'bran', label: 'BRAN2023 sea surface height, virtual Zarr over THREDDS netCDF', url: 'https://raw.githubusercontent.com/mdsumner/virtualized/main/remote/ocean_eta_t_2023.parq#var=eta_t&crs=EPSG:4326', display: 'EPSG:3857', fit: [140, -46, 156, -36], style: { palette: 'viridis', min: -1, max: 1 }, note: 'Kerchunk Parquet references: the Zarr is metadata only, and each chunk is a byte range of a daily netCDF file on a THREDDS file server. The server must allow cross-origin range requests.' },
+  { group: 'Zarr', id: 'ecmwf', label: 'ECMWF IFS ENS 2 m temperature (Zarr v3, dynamical.org)', url: S3COOP + '/dynamical/ecmwf-ifs-ens-forecast-15-day-0-25-degree/v0.1.0.zarr#var=temperature_2m', display: 'EPSG:8857', style: { palette: 'viridis', min: -40, max: 40 } },
   { group: 'Tile servers', id: 'osm', label: 'OpenStreetMap (XYZ, EPSG:3857)', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', display: 'EPSG:3857', tiles: { crs: 'EPSG:3857', maxZ: 19 }, attribution: '(c) OpenStreetMap contributors' },
   { group: 'Tile servers', id: 'esri', label: 'Esri World Imagery (XYZ, EPSG:3857)', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', display: 'EPSG:3031', tiles: { crs: 'EPSG:3857', maxZ: 19 }, attribution: 'Esri, Maxar, Earthstar Geographics' },
   { group: 'Tile servers', id: 'gibs3031', label: 'NASA GIBS Blue Marble (WMTS, EPSG:3031)', url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3031/best/BlueMarble_ShadedRelief_Bathymetry/default/500m/{z}/{y}/{x}.jpeg', display: 'EPSG:3031', tiles: { crs: 'EPSG:3031', origin: [-4194304, 4194304], res0: 8192, size: 512, maxZ: 4, extent: [-4194304, -4194304, 4194304, 4194304] } },
@@ -745,7 +746,7 @@ async function loadSource(spec, bg) {
     src.template = url;
     src.dsn = t.crs === 'EPSG:3857' && t.size === 256 ? url.replace('{z}', '${z}').replace('{x}', '${x}').replace('{y}', '${y}') : url;
   } else if (/\.zarr(\/|#|$)|\.parq(#|$)|#zarr|[?&#]var=/i.test(url)) {
-    const Z = await openZarr(url, setupLedger, null);
+    const Z = await openZarr(url, setupLedger, null, true);
     await ensureCrs(Z.crs);
     src.kind = 'zarr';
     src.crs = Z.crs;
@@ -754,7 +755,11 @@ async function loadSource(spec, bg) {
     src.rgba = false;
     src.res = Z.levels[0].res;
     src.levels = Z.levels.map((L) => ({ name: fmtRes(L.res, isGeographic(Z.crs)), res: L.res }));
-    src.dsn = 'ZARR:"' + (Z.virtual ? '/vsikerchunk_parquet_ref/{/vsicurl/' + Z.opts.base + '}' : '/vsicurl/' + Z.opts.base) + '"' + (Z.levels.length === 1 && Z.levels[0].path && Z.levels[0].path !== '/' ? ':' + Z.levels[0].path : '');
+    src.zsel = Z.slices.map((e) => e.name + ':' + e.k).join(',');
+    src.slice = Z.slices.map((e) => e.label);
+    // GDAL's classic Zarr syntax takes one index per extra dimension
+    const one = Z.levels.length === 1 && Z.levels[0].path && Z.levels[0].path !== '/';
+    src.dsn = 'ZARR:"' + (Z.virtual ? '/vsikerchunk_parquet_ref/{/vsicurl/' + Z.opts.base + '}' : '/vsicurl/' + Z.opts.base) + '"' + (one ? ':' + Z.levels[0].path + Z.slices.map((e) => ':' + e.k).join('') : '');
   } else if (/\.vrt(\?|$)/i.test(url)) {
     let text;
     if (/^file:/.test(url) && FILES.has(url)) text = await FILES.get(url).text();
@@ -1177,7 +1182,14 @@ function serverTile(panel, z, x, y) {
 // regular 1D coordinates. Blocks are chunks. zarrita does the decoding; the
 // store underneath is a panel's own, so its bytes land in that panel's
 // ledger. URL fragment: #var=NAME&sel=dim:index,dim:-1&crs=EPSG:xxxx
-// (a negative index counts from the end; other dimensions default to 0).
+// (a negative index counts from the end).
+// Slice policy for dimensions other than y and x: a time-like dimension
+// (named time, init_time, valid_time..., or CF axis T, standard_name time,
+// units "... since ...") defaults to its last step, the latest; any other
+// (depth, lead time, ensemble member) to its first. sel= overrides either.
+// The chosen value is decoded from the coordinate and shown in each panel,
+// and a view link records the index, so the link keeps its slice when the
+// store grows.
 const ZARRITA = 'https://cdn.jsdelivr.net/npm/zarrita@0.7.5/+esm';
 let zmod = null;
 function zarrita() {
@@ -1308,6 +1320,80 @@ function refsStore(base, ledger, limiter) {
   };
   return store;
 }
+const TIME_NAMES = ['time', 't', 'times', 'date', 'init_time', 'valid_time', 'forecast_reference_time', 'reference_time', 'time_counter'];
+function isTimeDim(name, at) {
+  const n = String(name).toLowerCase();
+  if (/lead|step|period|offset|bnds|bounds/.test(n)) return false;
+  if (TIME_NAMES.includes(n)) return true;
+  const sn = String(at.standard_name || '').toLowerCase();
+  if (sn === 'forecast_period') return false;
+  if (at.axis === 'T' || sn === 'time' || sn === 'forecast_reference_time') return true;
+  return /\bsince\b/i.test(String(at.units || ''));
+}
+// CF "<unit> since <date>" in the standard calendar to an ISO string;
+// null for other calendars or units this does not know.
+function cfTime(v, units, cal) {
+  const m = /^\s*(\w+)\s+since\s+(.+?)\s*$/i.exec(String(units || ''));
+  if (!m || !isFinite(v)) return null;
+  if (cal && !/^(standard|gregorian|proleptic_gregorian)$/i.test(cal)) return null;
+  const MS = { microseconds: 1e-3, milliseconds: 1, ms: 1, seconds: 1e3, second: 1e3, secs: 1e3, sec: 1e3, s: 1e3, minutes: 6e4, minute: 6e4, mins: 6e4, min: 6e4, hours: 36e5, hour: 36e5, hrs: 36e5, hr: 36e5, h: 36e5, days: 864e5, day: 864e5, d: 864e5 };
+  const mult = MS[m[1].toLowerCase()];
+  const d = /^(-?\d{1,4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}(?:\.\d+)?))?)?\s*(?:Z|UTC|GMT|[+-]0{1,2}:?0{0,2})?$/i.exec(m[2]);
+  if (!mult || !d) return null;
+  const t0 = new Date(0);
+  t0.setUTCFullYear(+d[1], +d[2] - 1, +d[3]);
+  t0.setUTCHours(+(d[4] || 0), +(d[5] || 0), 0, Math.round(+(d[6] || 0) * 1000));
+  const t = new Date(t0.getTime() + v * mult);
+  if (isNaN(t.getTime())) return null;
+  const iso = t.toISOString();
+  return t.getTime() % 864e5 === 0 ? iso.slice(0, 10) : iso.slice(0, 16).replace('T', ' ') + ' UTC';
+}
+// The slice each extra dimension is read at, and (when describe is set) a
+// label from its coordinate value. Coordinates are read once, at load, with
+// the setup ledger; the panels get the indexes and read no coordinates.
+async function zarrSlices(z, root, L0, opts, describe) {
+  const out = [];
+  for (let i = 0; i < L0.dims.length; i++) {
+    if (i === L0.yi || i === L0.xi) continue;
+    const name = String(L0.dims[i]), n = L0.arr.shape[i];
+    let ca = null;
+    try { ca = await z.open(root.resolve(name), { kind: 'array' }); } catch (e) { /* no coordinate */ }
+    const at = (ca && ca.attrs) || {};
+    const time = isTimeDim(name, at);
+    const given = opts.sel[name] !== undefined;
+    let k = given ? opts.sel[name] : time ? -1 : 0;
+    if (k < 0) k += n;
+    k = clamp(k, 0, n - 1);
+    const e = { name, n, k, time, given };
+    if (describe) {
+      let v = null;
+      if (ca && ca.shape.length === 1 && ca.shape[0] === n) {
+        try { const r = await z.get(ca, [z.slice(k, k + 1)]); v = Number(r.data[0]); } catch (err) { /* value unknown */ }
+      }
+      const when = v === null ? null : cfTime(v, at.units, at.calendar);
+      const val = when || (v === null || !isFinite(v) ? 'index ' + k : String(+v.toPrecision(6)) + (at.units ? ' ' + at.units : ''));
+      const pos = n === 1 ? 'only step' : k === n - 1 ? 'last of ' + n.toLocaleString('en-US') : k === 0 ? 'first of ' + n.toLocaleString('en-US') : 'step ' + (k + 1) + ' of ' + n.toLocaleString('en-US');
+      e.label = name + ' ' + val + ' (' + pos + (given ? ', set in URL' : time ? ', default: latest' : ', default: first') + ')';
+    }
+    out.push(e);
+  }
+  return out;
+}
+function withSel(url, sel) {
+  if (!sel) return url;
+  const i = url.indexOf('#');
+  const q = new URLSearchParams(i < 0 ? '' : url.slice(i + 1));
+  q.set('sel', sel);
+  return (i < 0 ? url : url.slice(0, i)) + '#' + q.toString().replace(/%3A/gi, ':').replace(/%2C/gi, ',');
+}
+function stripSel(url) {
+  const i = url.indexOf('#');
+  if (i < 0) return url;
+  const q = new URLSearchParams(url.slice(i + 1));
+  q.delete('sel');
+  const r = q.toString().replace(/%3A/gi, ':').replace(/%2C/gi, ',');
+  return url.slice(0, i) + (r ? '#' + r : '');
+}
 function parseZarrUrl(url) {
   const i = url.indexOf('#');
   const base = (i < 0 ? url : url.slice(0, i)).replace(/\/+$/, '');
@@ -1381,7 +1467,7 @@ function wktCrs(wkt) {
   return key;
 }
 // Open the store and describe it as levels, fine to coarse.
-async function openZarr(url, ledger, limiter) {
+async function openZarr(url, ledger, limiter, describe) {
   const z = await zarrita();
   const opts = parseZarrUrl(url);
   const raw = /\.parq$/i.test(opts.base) ? refsStore(opts.base, ledger, limiter) : zarrStore(opts.base, ledger, limiter);
@@ -1442,8 +1528,9 @@ async function openZarr(url, ledger, limiter) {
   };
   const fill = [decodeFill(A._FillValue), A.missing_value, levels[0].arr.fillValue].filter((v) => v !== undefined && v !== null);
   const vr = Array.isArray(A.valid_range) ? A.valid_range.map(Number) : null;
+  const slices = await zarrSlices(z, root, levels[0], opts, describe);
   return {
-    z, levels, crs, opts, virtual: !!raw.refs,
+    z, levels, crs, opts, virtual: !!raw.refs, slices,
     scale: A.scale_factor !== undefined ? +A.scale_factor : 1,
     offset: A.add_offset !== undefined ? +A.add_offset : 0,
     fill: fill.map(Number), validRange: vr
@@ -1457,7 +1544,8 @@ function zarrExtent(L) {
 function panelZarr(panel) {
   const S = panel.src || SRC;
   if (!panel.zarr) {
-    panel.zarr = openZarr(S.url, panel.ledger, panel.limiter);
+    // the slice is decided once, at load (S.zsel), so both panels read the same one
+    panel.zarr = openZarr(withSel(S.url, S.zsel), panel.ledger, panel.limiter);
     panel.zarr.catch(() => { panel.zarr = null; });
   }
   return panel.zarr;
@@ -1478,7 +1566,8 @@ function zarrRaster(Z, L, cap) {
       const sel = L.dims.map((d, i) => {
         if (i === L.yi) return z.slice(r0, r1);
         if (i === L.xi) return z.slice(c0, c1);
-        let k = Z.opts.sel[d] !== undefined ? Z.opts.sel[d] : 0;
+        const e = Z.slices.find((q) => q.name === String(d));
+        let k = e ? e.k : Z.opts.sel[d] !== undefined ? Z.opts.sel[d] : 0;
         if (k < 0) k += L.arr.shape[i];
         return clamp(k, 0, L.arr.shape[i] - 1);
       });
@@ -2235,6 +2324,8 @@ function updateHuds() {
     const refused = P.visible ? P.visible.filter((e) => e.info && e.info.refused).length : 0;
     let html = '<div class="row"><span><b>' + L.req + '</b> req</span><span><b>' + fmtBytes(L.bytes) + '</b></span><span><b>' + L.files + '</b> headers</span>' +
       (L.inflight ? '<span>' + L.inflight + ' in flight</span>' : '') + (L.err ? '<span>' + L.err + ' errors</span>' : '') + '</div>';
+    const S = P.src || SRC;
+    if (S && S.slice && S.slice.length) html += '<div class="slice">' + S.slice.map(esc).join('<br>') + '</div>';
     if (refused) {
       const n = viewFootprintFiles();
       html += '<div class="note bad">Per-file pyramids: ' + refused + ' screen tile' + (refused === 1 ? '' : 's') +
@@ -2326,8 +2417,10 @@ function renderLog() {
 function viewLinkUrl() {
   if (/^file:/.test(SRC.url)) return '(a local file cannot go in a link; the source stays on this device)';
   const q = new URLSearchParams();
-  const pre = PRESETS.find((p) => p.url === SRC.spec.url);
-  q.set('src', pre ? pre.id : SRC.spec.url);
+  const pre = PRESETS.find((p) => stripSel(p.url) === stripSel(SRC.spec.url));
+  q.set('src', pre ? pre.id : SRC.kind === 'zarr' ? stripSel(SRC.spec.url) : SRC.spec.url);
+  // the slice as indexes, so the link keeps it after the store grows
+  if (SRC.zsel) q.set('sel', SRC.zsel);
   q.set('display', DISP.native ? 'source' : DISP.crs);
   const geo = isGeographic(DISP.crs);
   q.set('at', [VIEW.cx, VIEW.cy].map((v) => v.toFixed(geo ? 6 : 1)).join(',') + ',' + VIEW.res.toPrecision(6));
@@ -2799,7 +2892,8 @@ function init() {
   // ?src=<preset id or URL>&display=<EPSG:xxxx|source>
   const q = new URLSearchParams(location.search);
   const want = q.get('src') || 'rema';
-  const p = PRESETS.find((x) => x.id === want) || { url: dsnToUrl(want) };
+  let p = PRESETS.find((x) => x.id === want) || { url: dsnToUrl(want) };
+  if (q.get('sel')) p = Object.assign({}, p, { url: withSel(p.url, q.get('sel')) });
   if (p.id) $('preset').value = p.id;
   else { const o = document.createElement('option'); o.value = ''; o.textContent = 'Your URL'; $('preset').prepend(o); $('preset').value = ''; }
   if (q.get('bg') && BACKGROUNDS.includes(q.get('bg'))) { $('bgSel').value = q.get('bg'); setBackground(q.get('bg')); }
@@ -2816,7 +2910,7 @@ function init() {
     if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, () => $('viewLink').select());
     else $('viewLink').select();
   });
-  window.GEARBOX = { panels, BGP, setBackground, VIEW, settled: () => !!(viewStart && viewStart.logged), get SRC() { return SRC; }, get DISP() { return DISP; }, logRows, zoomAt, viewChanged, useSource, setDisplay };
+  window.GEARBOX = { panels, BGP, setBackground, VIEW, settled: () => !!(viewStart && viewStart.logged), get SRC() { return SRC; }, get DISP() { return DISP; }, logRows, zoomAt, viewChanged, useSource, setDisplay, viewLinkUrl };
 }
 init();
 })();

@@ -70,7 +70,13 @@ Query parameters:
   `.zarr` or a `#var=` fragment is Zarr, anything else is a COG. A tile
   template can carry its zoom range: `.../{z}/{x}/{y}.png#maxz=12`. A Zarr
   URL can carry `#var=NAME&sel=dim:index,dim:-1&crs=EPSG:xxxx` (a negative
-  index counts from the end; unlisted dimensions are read at 0).
+  index counts from the end). Unlisted dimensions follow the slice policy:
+  time-like dimensions (by name, or CF `axis: T`, `standard_name: time`,
+  units `... since ...`) are read at their last step, the latest; any other
+  extra dimension (depth, lead time, ensemble member) at its first.
+- `sel`: `dim:index,...`, merged into the source's own `sel=`. View links
+  write it with the indexes in use, so a link keeps its slice when the store
+  grows.
 - `display`: `EPSG:3857`, `EPSG:4326`, `EPSG:3031`, `EPSG:3413`,
   `EPSG:8857`, `EPSG:3832` (Pacific Mercator), `source`, any other EPSG code, or a PROJ string such as
   `+proj=laea +lat_0=-90 +lon_0=140 +datum=WGS84` (URL-encoded). The display
@@ -156,6 +162,11 @@ policy, so changing it keeps the preset; it rides along in view links.
   `{hemi}` `{H}` `{yyyy}` `{mm}` `{Mon}` `{dd}` in the template.
 
 Overlays are context: their bytes are not counted in either panel's ledger.
+- **slice** (Zarr): under each panel's counts, the value read for every
+  dimension other than y and x, decoded from its coordinate (dates for CF
+  time in the standard calendar), with its position and whether it was the
+  default or set in the URL. Static sources (COG, VRT, tile servers) have no
+  time axis; the GIBS presets are the undated Blue Marble layer.
 - **View log**: per settled view and panel, the levels drawn (with tile
   counts), new headers opened, requests, bytes, time to settle, and
   projection calls.

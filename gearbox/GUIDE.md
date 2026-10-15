@@ -264,6 +264,19 @@ question for a browser is not the format but the host: the file server has
 to allow cross-origin range requests, and a server that throttles at a
 dozen concurrent requests needs a reader that queues politely.
 
+A cube also needs a slice, and the default is a policy worth stating. Gearbox
+reads time-like dimensions at their last step and every other extra
+dimension at its first: the latest analysis, the surface, the control
+member. A dimension is time-like by name (`time`, `init_time`, `valid_time`
+and the like) or by CF attributes (`axis: T`, `standard_name: time`, units
+of the form `... since ...`); lead time and forecast period are not. A
+`sel=dim:index` in the URL overrides either. Each panel shows the chosen
+value, decoded from the coordinate where the calendar is standard, and
+whether it was a default or asked for. A view link records the index rather
+than "latest", so the link keeps showing the same slice after the store
+grows. Reading index 0 silently, the easy default, shows the oldest step of
+an archive and looks like a working viewer.
+
 ## 8. Count the bytes
 
 Every number in this guide comes from Gearbox's per-panel ledger: a
